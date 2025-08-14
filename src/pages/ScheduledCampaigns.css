@@ -1,0 +1,79 @@
+.campaign-list-container {
+  direction: rtl;
+  text-align: right;
+  padding: 40px 20px;
+}
+
+.page-title {
+  font-size: 28px;
+  color: #008060;
+  margin-bottom: 8px;
+  border-bottom: 2px solid #00c896;
+  display: inline-block;
+  padding-bottom: 6px;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.campaign-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+}
+
+.campaign-table th {
+  background-color: #f1f9ff;
+  padding: 12px;
+  color: #333;
+  font-weight: 600;
+}
+
+.campaign-table td {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  font-size: 14px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.edit-btn,
+.delete-btn {
+  border: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.edit-btn {
+  background-color: white;
+  border: 2px solid #228be6;
+  color: #228be6;
+}
+
+.edit-btn:hover {
+  background-color: #228be6;
+  color: white;
+}
+
+.delete-btn {
+  background-color: white;
+  border: 2px solid #e03131;
+  color: #e03131;
+}
+
+.delete-btn:hover {
+  background-color: #e03131;
+  color: white;
+}

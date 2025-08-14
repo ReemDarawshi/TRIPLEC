@@ -1,0 +1,130 @@
+/* רקע כללי */
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #f5f9fc;
+  direction: rtl;
+}
+
+/* טופס */
+.login-form {
+  background: white;
+  padding: 30px 40px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  max-width: 400px;
+  box-sizing: border-box;
+}
+
+.form-title {
+  text-align: center;
+  color: #0d47a1;
+  margin-bottom: 20px;
+}
+
+/* שדות טקסט */
+.login-form label {
+  display: block;
+  margin: 12px 0 6px;
+  font-weight: 500;
+}
+
+.login-form input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+  transition: border 0.2s;
+}
+
+.login-form input:focus {
+  border-color: #0d47a1;
+  outline: none;
+}
+
+/* עטיפת שדה הסיסמה */
+.password-wrapper {
+  position: relative;
+}
+
+/* כפתור העין */
+.show-btn {
+  position: absolute;
+  top: 50%;
+  left: 8px; 
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.eye-icon {
+  width: 24px;
+  height: 24px;
+}
+
+/* כפתור התחברות */
+.btn-primary {
+  width: 100%;
+  background-color: #0d47a1;
+  color: white;
+  padding: 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: bold;
+  margin-top: 20px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: #08306b;
+}
+
+/* קישורים */
+.actions {
+  text-align: center;
+  margin-top: 15px;
+}
+
+.actions a {
+  display: block;
+  color: #0d47a1;
+  margin-top: 6px;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.actions a:hover {
+  text-decoration: underline;
+}
+
+.eye-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.eye-image {
+  width: 150px;  
+  height: auto;
+}
+
+.error-text {
+  color: red;
+  font-size: 14px;
+  margin: 4px 0 0;
+}
+
+.success-text {
+  color: green;
+  font-size: 14px;
+  margin-top: 8px;
+}

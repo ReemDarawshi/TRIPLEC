@@ -1,0 +1,260 @@
+.group-management-container {
+  padding: 2rem;
+  direction: rtl;
+}
+
+.page-title {
+  font-size: 1.8rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #3c7;
+  display: inline-block;
+}
+
+.group-card {
+  border-radius: 16px;
+  padding: 1.2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
+.group-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.group-header button {
+  margin-right: 8px;
+  transition: background-color 0.3s ease;
+}
+
+.group-contacts {
+  margin-top: 0.5rem;
+}
+
+/* 🧩 תגיות אנשי קשר */
+.contact-item {
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+  position: relative;
+  background-color: #ffffffaa;
+  border-left: 4px solid #2196f3;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+.manual-add-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+.manual-add-form input,
+.manual-add-form select {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  min-width: 150px;
+  font-size: 0.9rem;
+}
+.manual-add-form button {
+  background-color: #37bd7f;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.upload-excel {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+.upload-excel input[type="file"] {
+  margin-top: 0.5rem;
+  padding: 0.4rem;
+  font-size: 0.9rem;
+}
+
+.add-from-contacts-btn {
+  margin-top: 1rem;
+  background-color: #2196f3;
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.error-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 0.2rem;
+  flex-wrap: wrap;
+}
+.error {
+  color: red;
+  font-size: 0.8rem;
+}
+
+/* ✨ עיצוב מפתיע לקופסה של הוספת קבוצה */
+.add-group-card {
+  background: linear-gradient(145deg, #e0ffe3, #ffffff);
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease;
+}
+.add-group-card:hover {
+  transform: scale(1.02);
+}
+.add-group-card input,
+.add-group-card textarea {
+  display: block;
+  width: 100%;
+  padding: 0.6rem;
+  margin-bottom: 1rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+.add-group-card button {
+  background-color: #28a745;
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+.contact-item {
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+  position: relative;
+  background-color: #ffffffaa;
+  border-left: 4px solid #2196f3;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+/*  כפתור איקס למחיקת איש קשר */
+.contact-item button {
+  background: none;
+  border: none;
+  color: #d32f2f;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.contact-item button:hover {
+  color: #b71c1c;
+}
+
+
+button {
+  padding: 0.4rem 1rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background-color: white;
+  cursor: pointer;
+}
+
+.delete-btn {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.4rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+/* ✨ שדרוג למודל עם blur ואנימציה */
+.popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+.popup-content {
+  background-color: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+  max-width: 90%;
+  width: 500px;
+  direction: rtl;
+  animation: pop-in 0.3s ease-in-out;
+}
+.popup-content h3 {
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+}
+.popup-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 1.5rem;
+}
+.confirm-delete {
+  background-color: #dc3545;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.cancel-delete {
+  background-color: #6c757d;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+@keyframes pop-in {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* 🟣 כפתור "שמור שינויים" */
+.save-changes-btn {
+  margin-top: 1rem;
+  background-color: #8edda2;
+  color: white;
+  padding: 0.6rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+.save-changes-btn:hover {
+  background-color: #5e35b1;
+}
+
+/* 🎨 צבעים פסטליים לקבוצות */
+.pastel-blue { background-color: #e3f2fd; }
+.pastel-pink { background-color: #fde2e2; }
+.pastel-green { background-color: #d4edda; }
+.pastel-lilac { background-color: #f3e8ff; }
+.pastel-yellow { background-color: #fff9c4; }
+.pastel-mint { background-color: #e0f7fa; }

@@ -1,0 +1,139 @@
+.design-selector-container {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.title {
+  font-size: 34px;
+  font-weight: 800;
+  color: #008060;
+  margin-bottom: 40px;
+  border-bottom: 3px solid #00c896;
+  display: inline-block;
+  padding-bottom: 6px;
+}
+
+.design-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.design-card {
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+  padding: 15px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: 0.3s ease;
+  height: 100%;
+}
+
+.design-card.selected {
+  border: 2px solid #008060;
+  box-shadow: 0 0 10px rgba(0, 128, 96, 0.5);
+}
+
+.design-card img {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.design-card h3 {
+  font-size: 18px;
+  margin: 12px 0 6px 0;
+  color: #222;
+}
+
+.design-card p {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: auto;
+}
+
+.button-group {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+
+.button-group button {
+  flex: 1;
+  margin: 0 5px;
+  padding: 8px 12px;
+  background-color: white;
+  border: 2px solid #008060;
+  color: #008060;
+  font-weight: bold;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.button-group button:hover {
+  background-color: #008060;
+  color: white;
+}
+
+.continue-button {
+  margin-top: 40px;
+  padding: 14px 30px;
+  background-color: #008060;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.continue-button:hover {
+  background-color: #006647;
+}
+
+/* Popup styles */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.popup-content {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 90%;
+  max-height: 90%;
+  overflow: auto;
+  text-align: center;
+}
+
+.popup-content img {
+  max-width: 100%;
+  max-height: 80vh;
+  border-radius: 8px;
+}
+
+.popup-content button {
+  margin-top: 15px;
+  padding: 10px 20px;
+  background-color: #008060;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+}

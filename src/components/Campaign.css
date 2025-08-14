@@ -1,0 +1,53 @@
+.campaign-container {
+  max-width: 500px;
+  margin: 40px auto;
+  background-color: #f8fbfd;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.campaign-title {
+  text-align: center;
+  margin-bottom: 30px;
+  font-size: 28px;
+  color: #003366;
+}
+
+.campaign-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.campaign-form label {
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 5px;
+  direction: rtl;
+}
+
+.campaign-form input,
+.campaign-form select {
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  direction: rtl;
+}
+
+.campaign-button {
+  margin-top: 20px;
+  background-color: #003366;
+  color: white;
+  font-size: 16px;
+  padding: 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.campaign-button:hover {
+  background-color: #0055aa;
+}

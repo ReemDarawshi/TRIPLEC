@@ -1,0 +1,124 @@
+.dashboard-container {
+  direction: rtl;
+  padding: 30px;
+  background: #f8f9fa;
+  min-height: 100vh;
+  animation: fadein 1s ease-in;
+}
+
+@keyframes fadein {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sub-title {
+  color: #6c757d;
+  margin-bottom: 30px;
+  font-size: 1rem;
+}
+
+.cards-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 40px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+  padding: 20px;
+  flex: 1;
+  min-width: 220px;
+  transition: transform 0.3s ease, box-shadow 0.3s;
+  border-top: 4px solid #0d6efd;
+  position: relative;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.1);
+}
+
+.stat-card h3 {
+  font-size: 1.1rem;
+  color: #0d6efd;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.stat-card p {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #212529;
+  margin: 0;
+}
+
+.stat-card small {
+  color: #6c757d;
+  font-size: 0.85rem;
+}
+
+.quick-btn {
+  background-color: #e8f0ff;
+  color: #0d6efd;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  margin: 4px 0;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  width: 100%;
+}
+
+.quick-btn:hover {
+  background-color: #d0e4ff;
+}
+
+.chart-section {
+  background: white;
+  border-radius: 16px;
+  padding: 25px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  margin-top: 40px;
+  position: relative;
+}
+
+.chart-section h4 {
+  font-size: 1.2rem;
+  margin-bottom: 20px;
+  color: #343a40;
+}
+
+.chart-toggle {
+  position: absolute;
+  top: 25px;
+  left: 25px;
+  font-size: 0.85rem;
+  background: #0d6efd;
+  color: white;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.chart-toggle:hover {
+  background: #0a58ca;
+}
+
+.recharts-legend-item text {
+  font-size: 0.9rem;
+  font-weight: bold;
+  fill: #333 !important;
+}
+
+.recharts-legend-item rect {
+  rx: 4;
+  ry: 4;
+  stroke: #ccc;
+  stroke-width: 1;
+}
