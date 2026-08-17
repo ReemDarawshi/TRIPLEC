@@ -1,18 +1,55 @@
+/**
+ * Login.tsx
+ * ──────────────────────────────────────────────────────────────
+ * רכיב ההתחברות הראשי של המערכת.
+ *
+ * 🧩 פונקציונליות עיקרית:
+ * - טופס התחברות עם אימות שדות אימייל וסיסמה.
+ * - אימות מקומי:
+ *    ✅ אימייל בפורמט תקין.
+ *    ✅ סיסמה באורך מינימלי (6 תווים).
+ * - חוויית משתמש משופרת:
+ *    👁️ החלפת תמונת עין בהתאם לאורך הסיסמה וסטטוס ההצגה.
+ *    👁️ כפתור להצגת/הסתרת הסיסמה בלחיצה.
+ * - שליחת בקשת `POST` ל־`/auth/login` ב־backend לצורך התחברות.
+ * - שמירת המידע המקומי ב־`localStorage`: טוקן, פרטי משתמש, מזהה עסק (`business_id`).
+ * - מעבר ל־`/dashboard` לאחר התחברות מוצלחת.
+ * - הצגת שגיאה אם ההתחברות נכשלת.
+ *
+ *  נתונים מאוחסנים ב־localStorage:
+ * - token – לצורך אימות בבקשות הבאות.
+ * - user – אובייקט JSON מלא עם פרטי המשתמש.
+ * - business_id – משויך למשתמש לצורך שאילתות.
+ *
+ *  UI:
+ * - שדה אימייל וסיסמה עם תגי שגיאה.
+ * - תמונת עין מתחלפת בהתאם למצב הקלט.
+ * - קישורים ל־"שכחתי סיסמה" ו־"אין לי חשבון".
+ * *
+ * ⚠️ שיפור עתידי:
+ * - טיפול שגיאות מדויק יותר מהשרת (שגיאות מותאמות).
+ * - מעבר למערכת ניהול טפסים (כגון Formik).
+ * - אנימציה חלקה יותר לעין.
+ */
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './LoginRegister.css';
 
-const Login = () => {
+
+export const API_BASE_URL = "http://localhost:5000/api";
+
+  const Login = () => {
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [eyeImage, setEyeImage] = useState('/images/OPENED.JPG');
-
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
   const navigate = useNavigate();
-
+    
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setPassword(value);
@@ -64,7 +101,7 @@ const Login = () => {
     }
 
     if (valid) {
-      fetch('http://localhost:5000/login', {
+      fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -76,6 +113,9 @@ const Login = () => {
         .then((data) => {
           localStorage.setItem('token', data.token);
           localStorage.setItem('user', JSON.stringify(data.user));
+          localStorage.setItem('business_id', data.user.business_id);
+          console.log("Business ID from login:", data.user.business_id);
+
           navigate('/dashboard');
         })
         .catch((err) => {
@@ -84,6 +124,7 @@ const Login = () => {
         });
     }
   };
+  
 
   return (
     <div className="login-container" dir="rtl">

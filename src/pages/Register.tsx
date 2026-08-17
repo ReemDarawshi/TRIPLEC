@@ -1,3 +1,37 @@
+/**
+ * Register.tsx
+ * ──────────────────────────────────────────────────────────────
+ * קומפוננטת רישום משתמש חדש למערכת (טופס הרשמה).
+ *
+ *  פונקציונליות:
+ * - שדות טופס:
+ *   - שם מלא, אימייל, סיסמה, אישור סיסמה.
+ * - אימותים (ולידציות):
+ *   - שם מלא – לא ריק.
+ *   - אימייל – פורמט תקין.
+ *   - סיסמה – לפחות 6 תווים.
+ *   - אישור סיסמה – תואם לסיסמה.
+ * - אייקון עין משתנה בהתאם לאורך הסיסמה וחשיפתה.
+ * - אין שליחה אמיתית ל־backend – במקום זאת מוצגת הודעה קבועה על סגירת ההרשמה.
+ *
+ *  ניהול state:
+ * - `fullName`, `email`, `password`, `confirmPassword` – שדות הטופס.
+ * - `errors` – שגיאות טופס.
+ * - `showPassword`, `eyeImage` – נראות הסיסמה + אייקון מותאם.
+ * - `showMessage` – האם להציג הודעה שההרשמה סגורה.
+ *
+ *  עיצוב:
+ * - משתמש ב־CSS מתוך `LoginRegister.css`.
+ *
+ *  התנהגות:
+ * - אם כל השדות תקינים – מוצגת הודעה שההרשמה סגורה (ללא שליחה לשרת).
+ *
+ *  שיפור עתידי אפשרי:
+ * - שליחת נתונים אמיתית ל־API ליצירת משתמש.
+ * - ולידציה חזקה יותר (לדוגמה, שם בעברית בלבד).
+ * - אישור תנאי שימוש.
+ */
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './LoginRegister.css';
@@ -9,7 +43,6 @@ const Register = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [eyeImage, setEyeImage] = useState('/images/OPENED.JPG');
-
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [showMessage, setShowMessage] = useState(false);
   const navigate = useNavigate();
@@ -86,7 +119,7 @@ const Register = () => {
 
         {showMessage ? (
           <p className="error-text" style={{ textAlign: 'center' }}>
-            ✋ ההרשמה סגורה – נא לפנות לצוות TRIPLE לרישום משתמשים חדשים
+             ההרשמה סגורה – נא לפנות לצוות TRIPLE לרישום משתמשים חדשים
           </p>
         ) : (
           <>

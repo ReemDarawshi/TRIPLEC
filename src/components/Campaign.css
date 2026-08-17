@@ -1,53 +1,206 @@
+/* === אפקט כניסה חלקה === */
+.fade-in {
+  animation: fadeIn 0.5s ease both;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* === מיכל כללי === */
 .campaign-container {
-  max-width: 500px;
-  margin: 40px auto;
-  background-color: #f8fbfd;
-  padding: 30px;
-  border-radius: 16px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-}
-
-.campaign-title {
-  text-align: center;
-  margin-bottom: 30px;
-  font-size: 28px;
-  color: #003366;
-}
-
-.campaign-form {
+  direction: rtl;
+  min-height: 100vh;
+  padding: 48px 24px;
+  background:
+    radial-gradient(1200px 600px at 100% -10%, #e6f8ff 0%, transparent 60%),
+    radial-gradient(900px 600px at -10% 110%, #f6e9ff 0%, transparent 60%),
+    #f7f9fc;
   display: flex;
-  flex-direction: column;
+  justify-content: flex-end;
+}
+
+/* === טופס לבן (כרטיס) === */
+.form-container {
+  width: 100%;
+  max-width: 880px;
+  background: #fff;
+  padding: 28px;
+  border-radius: 20px;
+  box-shadow: 0 15px 35px rgba(29, 41, 57, 0.08);
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  border: 1px solid #eef2f7;
+  margin-inline-end: 40px;
+}
+
+.page-title {
+  font-size: 32px;
+  font-weight: 800;
+  color: #1f2937;
+  margin-bottom: 20px;
+  margin-inline-end: 40px; 
+  display: inline-block;
+  position: relative;
+  text-align: right;
+}
+
+.page-title::after {
+  content: "";
+  display: block;
+  height: 4px;
+  width: 100%;
+  margin-top: 8px;
+  background: linear-gradient(90deg, #25a4ff, #7a5cff, #c05bff);
+  border-radius: 999px;
+}
+
+/* === תוויות ושדות === */
+.form-container label {
+  font-size: 14px;
+  color: #3b4758;
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+.form-container input[type="text"],
+.form-container select {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  font-size: 15.5px;
+  background: #fbfcfe;
+  border: 1px solid #e5eaf1;
+  border-radius: 12px;
+  outline: none;
+  transition: 0.2s ease;
+}
+.form-container input:focus,
+.form-container select:focus {
+  background: #fff;
+  border-color: #7aa7ff;
+  box-shadow: 0 0 0 4px rgba(122, 167, 255, 0.2);
+}
+
+/* === קופסת קהל יעד === */
+.audience-box {
+  margin-top: 2px;
+  padding: 18px;
+  background: #f8fbff;
+  border: 1px solid #e9eef7;
+  border-radius: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
-.campaign-form label {
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 5px;
-  direction: rtl;
+.group-section, .role-section {
+  background: #ffffff;
+  border: 1px solid #eef2f7;
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 8px 20px rgba(17, 24, 39, 0.04);
 }
 
-.campaign-form input,
-.campaign-form select {
-  padding: 10px;
-  font-size: 16px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  direction: rtl;
+.mini-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 8px;
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #eef4ff;
+  border: 1px solid #e0e7ff;
 }
 
-.campaign-button {
-  margin-top: 20px;
-  background-color: #003366;
-  color: white;
-  font-size: 16px;
-  padding: 12px;
+/* === react-select (עם classNamePrefix="rs") === */
+.rs__control {
+  min-height: 44px !important;
+  border-radius: 12px !important;
+  border: 1px solid #e5eaf1 !important;
+  background: #fbfcfe !important;
+  box-shadow: none !important;
+  direction: rtl !important;
+}
+.rs__control--is-focused {
+  border-color: #7aa7ff !important;
+  box-shadow: 0 0 0 4px rgba(122, 167, 255, 0.2) !important;
+  background: #fff !important;
+}
+.rs__value-container {
+  padding-right: 10px !important;
+}
+.rs__multi-value {
+  background: #eef4ff !important;
+  border-radius: 10px !important;
+}
+.rs__multi-value__label {
+  color: #1e293b !important;
+  font-size: 13px !important;
+}
+.rs__multi-value__remove:hover {
+  background: #dbe7ff !important;
+}
+.rs__menu {
+  border-radius: 12px !important;
+  border: 1px solid #eef2f7 !important;
+  box-shadow: 0 14px 30px rgba(30, 41, 59, 0.12) !important;
+  text-align: right !important;
+}
+.rs__option--is-focused {
+  background: #f3f7ff !important;
+}
+.rs__option--is-selected {
+  background: #e6eeff !important;
+  color: #111827 !important;
+}
+.rs__indicator-separator {
+  display: none !important;
+}
+.rs__indicators {
+  flex-direction: row-reverse !important;
+}
+
+/* === כפתור ראשי === */
+.btn.btn-primary {
+  width: 100%;
+  height: 50px;
   border: none;
-  border-radius: 6px;
+  border-radius: 14px;
+  font-size: 15.5px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  color: #fff;
+  background: linear-gradient(90deg, #25a4ff, #7a5cff, #c05bff);
+  box-shadow: 0 12px 22px rgba(122, 92, 255, 0.25);
+  transition: 0.2s ease;
   cursor: pointer;
-  transition: 0.3s;
+}
+.btn.btn-primary:hover {
+  filter: brightness(1.03);
+  box-shadow: 0 14px 26px rgba(122, 92, 255, 0.32);
+}
+.btn.btn-primary:active {
+  transform: translateY(1px);
+}
+.btn.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
-.campaign-button:hover {
-  background-color: #0055aa;
+/* === מובייל === */
+@media (max-width: 860px) {
+  .form-container {
+    padding: 22px;
+    margin-inline-end: 0;
+  }
+  .audience-box {
+    grid-template-columns: 1fr;
+  }
+  .page-title {
+    font-size: 28px;
+  }
 }

@@ -1,14 +1,19 @@
+/**
+ * קומפוננטת השורש של האפליקציה:
+ * מגדירה את כל נתיבי הניווט (Routes) במערכת,
+ * מציגה את ה־Sidebar רק בדפים שאינם דפי התחברות,
+ * ומחברת בין דפים שונים (Login, Dashboard, Campaign וכו').
+ */
+
 import React from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 
-import Navbar from './components/Navbar.tsx';
 import Sidebar from './components/Sidebar.tsx';
-
+import Campaign from './components/Campaign.tsx';
 import Dashboard from './components/Dashboard.tsx';
 import UploadExcel from './components/UploadExcel.tsx';
 
 // קמפיין - שלבים
-import SendCampaign from './pages/SendCampaign.tsx';
 import AIPrompt from './pages/AIPrompt.tsx';
 import DesignSelector from './pages/DesignSelector.tsx';
 import DeliveryOptions from './pages/DeliveryOptions.tsx';
@@ -17,7 +22,6 @@ import DeliveryOptions from './pages/DeliveryOptions.tsx';
 import CampaignList from './pages/CampaignList.tsx';
 import CampaignPreview from './pages/CampaignPreview.tsx';
 import CampaignAnalytics from './pages/CampaignAnalytics.tsx';
-import CampaignDetails from './pages/CampaignDetails.tsx'; // ✅ ייבוא חדש
 
 // ניהול
 import Settings from './pages/Settings.tsx';
@@ -32,45 +36,49 @@ import Login from './pages/Login.tsx';
 import Register from './pages/Register.tsx';
 import ForgotPassword from './pages/ForgotPassword.tsx';
 import ResetPassword from './pages/ResetPassword.tsx';
-
 import NotFound from './pages/NotFound.tsx';
 
 const App: React.FC = () => {
   const location = useLocation();
-  const hideSidebarRoutes = ['/login', '/register', '/forgot', '/reset'];
+
+  // דפים שבהם לא נציג את ה־Sidebar (כמו התחברות, הרשמה וכו’)
+  const hideSidebarRoutes = ['/login', '/register', '/forgot', '/reset-password', '/'];
   const isAuthPage = hideSidebarRoutes.includes(location.pathname);
 
   return (
     <div className="d-flex flex-column min-vh-100">
-      {!isAuthPage && <Navbar />}
+      {/* מציגים את הסיידבר רק אם זה לא דף התחברות או דף דומה */}
       {!isAuthPage && <Sidebar />}
 
       <main className="flex-fill container py-4">
         <Routes>
-          {/* התחברות – ברירת מחדל */}
+          {/* דפי אימות */}
           <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot" element={<ForgotPassword />} />
-          <Route path="/reset" element={<ResetPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
-          {/* דפים מרכזיים */}
+          {/* דפים ראשיים */}
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/upload" element={<UploadExcel />} />
 
-          {/* יצירת קמפיין בשלבים */}
-          <Route path="/campaign" element={<SendCampaign />} />
+          {/* שלבי קמפיין */}
+          <Route path="/campaign" element={<Campaign />} />
+          <Route path="/campaign/ai/:id" element={<AIPrompt />} />
           <Route path="/ai" element={<AIPrompt />} />
-          <Route path="/design" element={<DesignSelector />} />
+          <Route path="/design/:id" element={<DesignSelector />} />
+          <Route path="/delivery/:id" element={<DeliveryOptions />} />
           <Route path="/delivery" element={<DeliveryOptions />} />
+          <Route path="/preview/:id" element={<CampaignPreview />} />
 
-          {/* קמפיינים */}
+          {/* קמפיינים קיימים */}
           <Route path="/campaigns" element={<CampaignList />} />
           <Route path="/campaigns/:id/preview" element={<CampaignPreview />} />
           <Route path="/campaigns/:id/analytics" element={<CampaignAnalytics />} />
-          <Route path="/campaign/:id" element={<CampaignDetails />} /> {/* ✅ נתיב לעריכה */}
+          <Route path="/analytics" element={<CampaignAnalytics />} />
 
-          {/* ניהול */}
+          {/* ניהול ומידע אישי */}
           <Route path="/settings" element={<Settings />} />
           <Route path="/users" element={<Users />} />
           <Route path="/scheduled" element={<ScheduledCampaigns />} />
@@ -78,7 +86,7 @@ const App: React.FC = () => {
           <Route path="/groups" element={<GroupManagement />} />
           <Route path="/profile" element={<MyProfile />} />
 
-          {/* 404 */}
+          {/* דף שגיאה */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

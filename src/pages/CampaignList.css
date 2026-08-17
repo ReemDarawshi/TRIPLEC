@@ -91,3 +91,59 @@
   background-color: #e03131;
   color: white;
 }
+
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 0.85rem;
+  display: inline-block;
+}
+
+.status-badge.sent {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-badge.scheduled {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status-badge.failed {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 0.85rem;
+  display: inline-block;
+}
+
+.status-badge.sent {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-badge.scheduled {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status-badge.failed {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.search-bar {
+  margin: 1rem 0;
+}
+
+.search-bar input {
+  padding: 0.5rem;
+  width: 50%;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}

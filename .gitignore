@@ -21,3 +21,20 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# Environment secrets
+.env
+backend/.env
+src/.env
+
+# Generated and uploaded files
+backend/static/uploads/
+backend/static/posters/
+static/uploads/
+static/posters/

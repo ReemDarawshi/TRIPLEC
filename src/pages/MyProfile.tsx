@@ -1,36 +1,124 @@
-import React, { useState } from 'react';
+/**
+ * MyProfile.tsx
+ * ──────────────────────────────────────────────────────────────
+ * רכיב דף פרופיל משתמש במערכת.
+ *
+ *  פונקציונליות עיקרית:
+ * - שליפת פרטי המשתמש מהשרת (`/api/profile`) והצגתם בטופס.
+ * - עריכת פרטים אישיים:
+ *   - שם פרטי, שם משפחה, טלפון (שדה אימייל מוצג אך אינו ניתן לעריכה).
+ *   - שמירה מתבצעת בבקשת PUT ל־`/api/profile`.
+ * - שינוי סיסמה:
+ *   - נפתח פופאפ להזנת סיסמה נוכחית וחדשה.
+ *   - שליחה ל־`/api/profile/change_password`.
+ *
+ *  שימושים:
+ * - מאפשר למשתמש לעדכן את פרטי הקשר שלו ולשמור שינויים.
+ * - מאפשר שינוי סיסמה מתוך הדשבורד.
+ *
+ *  ניהול מצבים (useState):
+ * - `user`: האובייקט הראשי של פרטי המשתמש.
+ * - `showPasswordModal`: האם להציג את מודל שינוי הסיסמה.
+ * - `currentPassword` / `newPassword`: שדות שינוי הסיסמה.
+ *
+ *  useEffect:
+ * - עם עליית הקומפוננטה, נשלחת בקשת GET לשליפת פרטי המשתמש.
+ *
+ *  עיצוב:
+ * - מבוסס על קובץ CSS נלווה: `MyProfile.css`.
+ * - כולל תגית `badge` למצבים בהם `user.role === 'Admin'`.
+ *
+ *  שיפור עתידי:
+ * - הוספת ולידציה לנתונים לפני שליחה.
+ * - אישור סיסמה חדשה חוזרת.
+ * - אפשרות לשינוי אימייל (אם יתמוך צד שרת).
+ */
+
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import './MyProfile.css';
 
 const MyProfile = () => {
   const [user, setUser] = useState({
-    firstName: 'רים',
-    lastName: 'דראושה',
-    email: 'reem@example.com',
-    phone: '050-1234567',
-    role: 'Marketing',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    role: '',
   });
 
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    axios
+      .get('http://localhost:5000/api/profile', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((response) => {
+        setUser(response.data);
+      })
+      .catch((error) => {
+        console.error('שגיאה בקבלת הפרופיל', error);
+      });
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUser({ ...user, [e.target.name]: e.target.value });
   };
 
   const handleSave = () => {
-    alert('הפרטים עודכנו בהצלחה (מדומה)');
+    const token = localStorage.getItem('token');
+    axios
+      .put(
+        'http://localhost:5000/api/profile',
+        {
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phone: user.phone,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      )
+      .then(() => {
+        alert('הפרטים עודכנו בהצלחה');
+      })
+      .catch((error) => {
+        alert('שגיאה בעדכון הפרופיל');
+        console.error(error);
+      });
   };
 
   const handlePasswordChange = () => {
-    if (currentPassword && newPassword) {
-      alert('סיסמה שונתה (מדומה)');
-      setShowPasswordModal(false);
-      setCurrentPassword('');
-      setNewPassword('');
-    } else {
+    if (!currentPassword || !newPassword) {
       alert('נא למלא את כל השדות');
+      return;
     }
+    const token = localStorage.getItem('token');
+    axios.put(
+    'http://localhost:5000/api/profile/change_password',
+    {
+      current_password: currentPassword,  
+      new_password: newPassword,          
+    },
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+)
+
+      .then(() => {
+        alert('הסיסמה עודכנה בהצלחה');
+        setShowPasswordModal(false);
+        setCurrentPassword('');
+        setNewPassword('');
+      })
+      .catch((error) => {
+        alert('שגיאה בעדכון הסיסמה');
+        console.error(error);
+      });
   };
 
   return (
@@ -69,7 +157,7 @@ const MyProfile = () => {
           <input
             type="text"
             name="phone"
-            value={user.phone}
+            value={user.phone || ''}
             onChange={handleChange}
           />
         </label>
@@ -78,9 +166,7 @@ const MyProfile = () => {
         <p>
           תפקיד במערכת: <strong>{user.role}</strong>
         </p>
-        {user.role === 'Admin' && (
-          <p className="badge">בעל העסק</p>
-        )}
+        {user.role === 'Admin' && <p className="badge">בעל העסק</p>}
 
         <h3>אבטחה</h3>
         <button

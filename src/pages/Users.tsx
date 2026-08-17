@@ -1,5 +1,13 @@
+/**
+ * קומפוננטת ניהול משתמשים במערכת TRIPLE.
+ * מאפשרת לצפות, להוסיף ולמחוק משתמשים (admin/marketing/viewer).
+ * כולל קריאות API ל-GET, POST, DELETE עם טוקן אימות.
+ * מיועדת לשימוש ע"י משתמשים עם הרשאות ניהול בלבד.
+ */
+
 import React, { useState, useEffect } from 'react';
 import './Users.css';
+import axios from 'axios';
 
 interface User {
   id: number;
@@ -22,45 +30,88 @@ const Users = () => {
   });
 
   useEffect(() => {
-    const storedUsers = localStorage.getItem('local_users');
-    if (storedUsers) {
-      setUsers(JSON.parse(storedUsers));
-    }
+    fetchUsers();
   }, []);
 
-  const saveToStorage = (list: User[]) => {
-    localStorage.setItem('local_users', JSON.stringify(list));
-    setUsers(list);
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('אין הרשאת התחברות');
+        return;
+      }
+
+      const response = await axios.get('http://localhost:5000/api/users', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUsers(response.data);
+    } catch (error) {
+      console.error('שגיאה בטעינת המשתמשים:', error);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setNewUser({ ...newUser, [e.target.name]: e.target.value });
   };
 
-  const handleAddUser = () => {
+  const handleAddUser = async () => {
     if (!newUser.firstName || !newUser.email) {
       alert('נא למלא שם פרטי ודוא"ל');
       return;
     }
 
-    if (users.some(u => u.email.toLowerCase() === newUser.email.toLowerCase())) {
-      alert('האימייל כבר קיים במערכת');
-      return;
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('אין טוקן התחברות');
+        return;
+      }
+
+      const fullName = `${newUser.firstName} ${newUser.lastName}`.trim();
+
+      await axios.post(
+        'http://localhost:5000/api/users',
+        {
+          full_name: fullName,
+          email: newUser.email,
+          role: newUser.role || 'viewer',
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      alert('המשתמש נוסף ונשלח אליו מייל');
+      setNewUser({ id: 0, firstName: '', lastName: '', email: '', phone: '', role: '' });
+
+      fetchUsers(); // ריענון רשימה
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'שגיאה בהוספת משתמש');
+      console.error(error);
     }
-
-    const newId = users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1;
-    const updatedList = [...users, { ...newUser, id: newId }];
-    saveToStorage(updatedList);
-
-    setNewUser({ id: 0, firstName: '', lastName: '', email: '', phone: '', role: '' });
   };
 
-  const handleDelete = (id: number, name: string) => {
+  const handleDelete = async (id: number, name: string) => {
     const confirmDelete = window.confirm(`האם את בטוחה שברצונך למחוק את המשתמש ${name}?`);
     if (!confirmDelete) return;
 
-    const updatedList = users.filter((u) => u.id !== id);
-    saveToStorage(updatedList);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('אין טוקן התחברות');
+        return;
+      }
+
+      await axios.delete(`http://localhost:5000/api/users/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      alert('המשתמש נמחק');
+      fetchUsers(); // טען את הרשימה מחדש
+    } catch (error) {
+      alert('שגיאה במחיקה');
+      console.error(error);
+    }
   };
 
   return (

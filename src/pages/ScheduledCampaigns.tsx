@@ -1,6 +1,21 @@
-import React from 'react';
+/**
+ * קובץ: ScheduledCampaigns.tsx
+ * תיאור: קומפוננטת React המציגה את רשימת הקמפיינים המתוזמנים במערכת TRIPLE.
+ * 
+ * הפונקציונליות כוללת:
+ * - שליפה מהשרת של כל הקמפיינים העתידיים שנקבע להם תזמון שליחה.
+ * - הצגה של טבלת נתונים כולל: כותרת הקמפיין, ערוץ השליחה, תאריך, סטטוס, מי שלח.
+ * - אפשרות לבטל תזמון של קמפיין (שליחת בקשת DELETE לשרת).
+ * - שימוש ב־Bearer Token לשם אימות מול ה־API.
+ * 
+ * הקובץ משתמש ב־CSS חיצוני לעיצוב: ScheduledCampaigns.css
+ * ומתחבר ל־endpoint: /api/campaigns/scheduled
+ * 
+ */
+
+
+import React, { useEffect, useState } from 'react';
 import './ScheduledCampaigns.css';
-import { useNavigate } from 'react-router-dom';
 
 interface ScheduledCampaign {
   id: number;
@@ -8,50 +23,78 @@ interface ScheduledCampaign {
   channel: string;
   date: string;
   time: string;
-  audience: string;
+  status: string;
   sender: string;
 }
 
-const campaigns: ScheduledCampaign[] = [
-  {
-    id: 1,
-    title: 'קמפיין שנה טובה',
-    channel: 'Email',
-    date: '2025-09-10',
-    time: '08:00',
-    audience: 'לקוחות',
-    sender: 'רות כהן',
-  },
-  {
-    id: 2,
-    title: 'עדכון אספקה',
-    channel: 'WhatsApp',
-    date: '2025-09-12',
-    time: '14:30',
-    audience: 'ספקים',
-    sender: 'רים דארוושה',
-  },
-];
-
 const ScheduledCampaigns: React.FC = () => {
-  const navigate = useNavigate();
+  const [campaigns, setCampaigns] = useState<ScheduledCampaign[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleEdit = (id: number) => {
-    navigate(`/campaign/${id}`); // ניווט לדף פרטי קמפיין
+  useEffect(() => {
+    fetchCampaigns();
+  }, []);
+
+  const fetchCampaigns = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/campaigns/scheduled', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        throw new Error('שגיאה בטעינת הקמפיינים');
+      }
+
+      const data = await response.json();
+      setCampaigns(data);
+    } catch (error) {
+      console.error('שגיאה בשליפת קמפיינים מתוזמנים:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return (
-    <div className="campaign-list-container">
-      <h2 className="page-title">קמפיינים מתוזמנים</h2>
-      <p className="subtitle">כל הקמפיינים הצפויים להישלח בתאריכים עתידיים</p>
+  const handleCancelCampaign = async (id: number) => {
+    const confirmCancel = window.confirm('האם את בטוחה שברצונך לבטל את תזמון הקמפיין הזה?');
+    if (!confirmCancel) return;
 
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/campaigns/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        throw new Error('שגיאה בביטול הקמפיין');
+      }
+
+      setCampaigns(prev => prev.filter(c => c.id !== id));
+      alert('הקמפיין בוטל בהצלחה ✅');
+    } catch (error) {
+      console.error('שגיאה בביטול הקמפיין:', error);
+      alert('שגיאה בביטול הקמפיין ❌');
+    }
+  };
+
+return (
+  <div className="campaign-list-container">
+    <h2 className="page-title">קמפיינים מתוזמנים</h2>
+    <p className="subtitle">כל הקמפיינים הצפויים להישלח בתאריכים עתידיים</p>
+
+    {loading ? (
+      <p>טוען נתונים...</p>
+    ) : campaigns.length === 0 ? (
+      <p>לא נמצאו קמפיינים מתוזמנים.</p>
+    ) : (
       <table className="campaign-table">
         <thead>
           <tr>
             <th>כותרת</th>
             <th>ערוץ</th>
             <th>תאריך</th>
-            <th>קהל יעד</th>
+            <th>סטטוס</th>
             <th>על ידי</th>
             <th>פעולה</th>
           </tr>
@@ -62,18 +105,18 @@ const ScheduledCampaigns: React.FC = () => {
               <td>{c.title}</td>
               <td>{c.channel}</td>
               <td>{`${c.date} ${c.time}`}</td>
-              <td>{c.audience}</td>
+              <td>{c.status}</td>
               <td>{c.sender}</td>
-              <td className="actions">
-                <button className="edit-btn" onClick={() => handleEdit(c.id)}>עריכה</button>
-                <button className="delete-btn">מחק</button>
+              <td className="actions-cell">
+                <button className="delete-btn" onClick={() => handleCancelCampaign(c.id)}>
+                  🗑 בטל תזמון
+                </button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
-  );
-};
-
+    )}
+  </div>
+);}
 export default ScheduledCampaigns;

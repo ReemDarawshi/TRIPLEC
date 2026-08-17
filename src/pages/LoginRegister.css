@@ -1,130 +1,137 @@
 /* רקע כללי */
 .login-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e0f7fa, #f1f8ff);
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
-  background-color: #f5f9fc;
   direction: rtl;
+  font-family: 'Rubik', sans-serif;
+  padding: 32px;
 }
 
-/* טופס */
+/* כרטיס רחב */
 .login-form {
-  background: white;
-  padding: 30px 40px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  background-color: white;
+  padding: 48px 64px;
+  border-radius: 32px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 400px;
-  box-sizing: border-box;
+  max-width: 600px;
+  text-align: right;
+  transition: all 0.3s ease-in-out;
 }
 
+/* כותרת */
 .form-title {
+  font-size: 32px;
+  font-weight: bold;
+  color: #2c3e50;
+  margin-bottom: 24px;
   text-align: center;
-  color: #0d47a1;
-  margin-bottom: 20px;
 }
 
-/* שדות טקסט */
-.login-form label {
+/* אייקון עיניים */
+.eye-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 32px;
+}
+
+.eye-image {
+  width: 72px;
+  height: auto;
+  opacity: 0.9;
+}
+
+/* תוויות */
+label {
   display: block;
-  margin: 12px 0 6px;
+  margin-bottom: 6px;
   font-weight: 500;
+  color: #333;
+  font-size: 15px;
 }
 
-.login-form input {
+/* שדות קלט */
+input[type="text"],
+input[type="password"] {
   width: 100%;
-  padding: 10px 12px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  border: 1.5px solid #ccc;
+  border-radius: 12px;
   font-size: 16px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  box-sizing: border-box;
-  transition: border 0.2s;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  background-color: #f9f9f9;
 }
 
-.login-form input:focus {
-  border-color: #0d47a1;
+input:focus {
+  border-color: #42a5f5;
+  box-shadow: 0 0 6px rgba(66, 165, 245, 0.4);
   outline: none;
 }
 
-/* עטיפת שדה הסיסמה */
+/* כפתור הצגת סיסמה */
 .password-wrapper {
   position: relative;
 }
 
-/* כפתור העין */
 .show-btn {
   position: absolute;
+  left: 14px;
   top: 50%;
-  left: 8px; 
   transform: translateY(-50%);
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0;
+  font-size: 18px;
+  color: #42a5f5;
 }
 
-.eye-icon {
-  width: 24px;
-  height: 24px;
+/* הודעות שגיאה */
+.error-text {
+  color: crimson;
+  font-size: 14px;
+  margin-top: -10px;
+  margin-bottom: 12px;
 }
 
 /* כפתור התחברות */
 .btn-primary {
-  width: 100%;
-  background-color: #0d47a1;
+  background: linear-gradient(to right, #42a5f5, #7e57c2);
   color: white;
-  padding: 12px;
   border: none;
-  border-radius: 6px;
-  font-size: 16px;
-  font-weight: bold;
-  margin-top: 20px;
+  padding: 14px;
+  font-size: 17px;
+  border-radius: 18px;
+  width: 100%;
+  margin-top: 10px;
+  margin-bottom: 20px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background 0.3s ease, transform 0.2s;
 }
 
 .btn-primary:hover {
-  background-color: #08306b;
+  background: linear-gradient(to right, #2196f3, #673ab7);
+  transform: scale(1.02);
 }
 
 /* קישורים */
 .actions {
-  text-align: center;
-  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 15px;
+  align-items: center;
 }
 
 .actions a {
-  display: block;
-  color: #0d47a1;
-  margin-top: 6px;
-  font-size: 14px;
+  color: #1976d2;
   text-decoration: none;
+  transition: color 0.3s ease;
 }
 
 .actions a:hover {
-  text-decoration: underline;
-}
-
-.eye-wrapper {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 20px;
-}
-
-.eye-image {
-  width: 150px;  
-  height: auto;
-}
-
-.error-text {
-  color: red;
-  font-size: 14px;
-  margin: 4px 0 0;
-}
-
-.success-text {
-  color: green;
-  font-size: 14px;
-  margin-top: 8px;
+  color: #0d47a1;
 }

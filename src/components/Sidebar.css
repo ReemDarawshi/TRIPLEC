@@ -1,71 +1,71 @@
+/* Sidebar.css */
 .sidebar {
-  position: fixed;
-  top: 0;
-  right: -250px;
-  width: 220px;
-  height: 100%;
-  background-color: #f4f7fa;
-  border-left: 1px solid #ddd;
+  width: 250px;
+  background-color: #f5faff;
+  height: 100vh;
   padding: 20px;
-  transition: right 0.3s ease-in-out;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+  position: fixed;
+  right: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  transition: all 0.3s ease;
   z-index: 1000;
 }
 
-.sidebar.open {
-  right: 0;
+.sidebar-logo {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 25px;
 }
 
-.sidebar h2 {
-  font-size: 1.4rem;
-  margin-bottom: 20px;
-  color: #0d6efd;
-  font-weight: bold;
+.sidebar-logo img {
+  max-width: 140px;
+  height: auto;
 }
 
-.sidebar nav a {
-  display: block;
-  padding: 10px;
-  color: #333;
+.sidebar-links {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.sidebar-links a {
   text-decoration: none;
-  border-radius: 4px;
-  transition: background 0.2s;
+  color: #333;
+  font-size: 16px;
+  padding: 10px 15px;
+  border-radius: 12px;
+  transition: background 0.2s, color 0.2s;
+  font-weight: 500;
 }
 
-.sidebar nav a:hover,
-.sidebar nav a.active {
-  background-color: #e8f0ff;
-  color: #0d6efd;
-}
-
-.sidebar-toggle {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  cursor: pointer;
-  z-index: 1100;
-}
-
-.sidebar-toggle .bar {
-  width: 25px;
-  height: 3px;
-  background-color: #0d6efd;
-  margin: 5px 0;
-  transition: 0.4s;
+.sidebar-links a:hover,
+.sidebar-links a.active {
+  background-color: #008060;
+  color: white;
 }
 
 .logout-btn {
-  margin-top: 20px;
-  width: 100%;
-  padding: 10px;
-  font-size: 0.95rem;
-  background-color: #dc3545;
+  margin-top: auto;
+  background-color: #e63946;
   color: white;
   border: none;
-  border-radius: 6px;
+  padding: 12px 20px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: background 0.2s ease;
+  font-size: 16px;
+  width: 100%;
+  transition: background-color 0.3s ease;
 }
 
 .logout-btn:hover {
   background-color: #c82333;
+}
+
+.sidebar-toggle {
+  display: none; /* תוסיפי אם את רוצה גם מצב מובייל בעתיד */
 }

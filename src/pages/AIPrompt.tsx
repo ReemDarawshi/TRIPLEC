@@ -1,99 +1,170 @@
-import React, { useState } from "react";
+/**
+ *  AIPrompt.tsx – שלב הבינה המלאכותית ביצירת קמפיין
+ *
+ * קומפוננטה זו מהווה את השלב הראשון ביצירת תוכן לקמפיין באמצעות בינה מלאכותית.
+ *
+ * פונקציונליות עיקרית:
+ * 1.  שליפת טקסט מוצע וטמפלטים מהשרת עבור קמפיין לפי `campaign_id` (מתוך ה-URL).
+ * 2.  הצגת הטקסט לעריכה על ידי המשתמש באמצעות textarea.
+ * 3.  הצגת טמפלטים שהמשתמש יכול לבחור מהם בלחיצת כפתור.
+ * 4.  שמירת הטקסט המעודכן ושליחתו לשרת, והעברה לשלב הבא – בחירת עיצוב (`/design/:id`).
+ *
+ * שימושים:
+ * - מתבסס על בינה מלאכותית בצד השרת (`/api/ai/generate` ו־`/api/ai/texts`)
+ * - נשען על טוקן מזהה מה־`localStorage` לצורכי הרשאות.
+ * - עושה שימוש ב־axios לשליחת בקשות HTTP.
+ *
+ *  שלב זה מגיע מיד לאחר יצירת קמפיין ומקדים את שלב העיצוב.
+ */
+
+import React, { useEffect, useState } from "react";
 import "./AIPrompt.css";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import axios from "axios";
 
-type AudienceKey = "client" | "supplier" | "agent";
-
-const AIPrompt: React.FC = () => {
+  const AIPrompt: React.FC = () => {
   const navigate = useNavigate();
-
+  const { id } = useParams();
+  const CAMPAIGN_ID = id;
   const [prompt, setPrompt] = useState("");
-  const [audience, setAudience] = useState<AudienceKey[]>([]);
   const [busy, setBusy] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
 
-  // ID קבוע זמני
-  const CAMPAIGN_ID = 4;
-
-  // הוספה/הסרה של קטגוריה
-  const handleToggleAudience = (type: AudienceKey) => {
-    setAudience((prev) =>
-      prev.includes(type) ? prev.filter((a) => a !== type) : [...prev, type]
-    );
-  };
-
-  const handleTemplateInsert = (text: string) => {
-    setPrompt(text);
-  };
-
-  // ⛔ גרסה זמנית ללא API
-  const handleContinue = async () => {
-    if (!prompt.trim() || audience.length === 0) {
-      alert("נא למלא טקסט ולבחור קהל יעד");
-      return;
-    }
-
+  // שלב 1: שליפת טקסט ראשון וטמפלטים מהשרת (בינה אוטומטית)
+useEffect(() => {
+  const fetchPromptSuggestions = async () => {
     try {
       setBusy(true);
-      // סימולציה של שמירה וטעינה
-      await new Promise((res) => setTimeout(res, 1000));
-      localStorage.setItem("last_message_id", "1234");
-      console.log("נבחר קהל:", audience);
 
-      navigate("/design");
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        console.error("לא נמצא טוקן");
+        return;
+      }
+
+      const response = await axios.post(
+        "http://localhost:5000/api/ai/prompt-suggestions",
+        {
+          campaign_id: CAMPAIGN_ID
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      console.log("Prompt suggestions response:", response.data);
+
+      if (response.data.suggestions) {
+        setSuggestions(response.data.suggestions);
+      }
+
     } catch (err: any) {
-      alert("שגיאה זמנית");
+      console.error(
+        "שגיאה ביצירת הצעות Prompt:",
+        err?.response?.data || err
+      );
     } finally {
       setBusy(false);
     }
   };
 
+  if (CAMPAIGN_ID) {
+    fetchPromptSuggestions();
+  }
+}, [CAMPAIGN_ID]);
+
+  // שלב 2: שליחת prompt מעודכן לשרת – כדי שישמר וישתמש בו ליצירת טקסטים (בהמשך)
+  const handleContinue = async () => {
+  if (!prompt.trim()) {
+    alert("יש לכתוב רעיון לקמפיין או לבחור אחת מההצעות.");
+    return;
+  }
+
+  try {
+    setBusy(true);
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      alert("לא נמצא טוקן");
+      return;
+    }
+
+    const res = await axios.post(
+      "http://localhost:5000/api/ai/texts",
+      {
+        campaign_id: CAMPAIGN_ID,
+        prompt: prompt.trim()
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (res.status === 200) {
+      navigate(`/design/${CAMPAIGN_ID}`);
+    } else {
+      alert("לא הצלחנו להמשיך לשלב הבא");
+    }
+
+  } catch (err: any) {
+    console.error(
+      "שגיאה ביצירת טקסטים:",
+      err?.response?.data || err
+    );
+
+    alert(
+      err?.response?.data?.error ||
+      "שגיאה בעת יצירת הטקסטים לקמפיין"
+    );
+
+  } finally {
+    setBusy(false);
+  }
+};
   return (
     <div className="ai-container" dir="rtl">
-      <h2>שלב הבינה – יצירת תוכן לקמפיין</h2>
-
-      <div className="btn-group">
-        <button
-          className={audience.includes("client") ? "active" : ""}
-          onClick={() => handleToggleAudience("client")}
-        >
-          לקוחות
-        </button>
-        <button
-          className={audience.includes("supplier") ? "active" : ""}
-          onClick={() => handleToggleAudience("supplier")}
-        >
-          ספקים
-        </button>
-        <button
-          className={audience.includes("agent") ? "active" : ""}
-          onClick={() => handleToggleAudience("agent")}
-        >
-          סוכנים
-        </button>
-      </div>
+      <h2>מה תרצי לקדם בקמפיין הזה?</h2>
 
       <textarea
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
-        placeholder="כתוב כאן מה ברצונך להעביר..."
+        placeholder="למשל: אני רוצה לקדם את הרעיון המרכזי של הקמפיין ולעודד את הלקוחות לבצע פעולה..."
+        className="prompt-textarea"
       />
 
-      <div className="templates">
-        <p>או בחר טמפלט מוכן:</p>
-        <button onClick={() => handleTemplateInsert("הודעה ללקוחות על מבצע 1+1 לחג")}>
-          מבצע לקוחות
-        </button>
-        <button onClick={() => handleTemplateInsert("עדכון לספקים על שינוי בשעות הקבלה")}>
-          הודעה לספקים
-        </button>
-        <button onClick={() => handleTemplateInsert("תזכורת לסוכן להזין דו״ח שבועי")}>
-          תזכורת לסוכן
+{suggestions.length > 0 && (
+  <div className="templates">
+    <p>או התחילי מאחת ההצעות של TRIPLE:</p>
+
+    {suggestions.map((suggestion, idx) => (
+      <button
+        key={idx}
+        type="button"
+        onClick={() => setPrompt(suggestion)}
+      >
+        {suggestion}
+      </button>
+    ))}
+  </div>
+)}
+
+      <div className="action-buttons">
+        <button
+          className="btn-continue"
+          onClick={handleContinue}
+          disabled={busy}
+        >
+          {busy ? "שולח..." : "המשך לבחירת עיצוב"}
         </button>
       </div>
-
-      <button className="btn-continue" onClick={handleContinue} disabled={busy}>
-        {busy ? "שומר..." : "המשך לבחירת עיצוב"}
-      </button>
     </div>
   );
 };

@@ -1,139 +1,230 @@
-.design-selector-container {
-  padding: 40px 20px;
-  text-align: center;
+/* === עמוד ראשי === */
+.design-selector-page {
+  direction: rtl;
+  max-width: 1100px;
+  margin: 60px auto;
+  padding: 20px;
 }
 
-.title {
-  font-size: 34px;
+/* === כותרות === */
+.section-title {
+  font-size: 26px;
   font-weight: 800;
-  color: #008060;
-  margin-bottom: 40px;
-  border-bottom: 3px solid #00c896;
-  display: inline-block;
-  padding-bottom: 6px;
+  color: #0f2d57;
+  margin-bottom: 10px;
 }
 
-.design-grid {
+.section-subtitle {
+  font-size: 16px;
+  font-weight: 500;
+  color: #64748b;
+  margin-bottom: 20px;
+}
+
+/* === הודעה שאין תוצאות === */
+.empty-message {
+  background: #fff3f3;
+  padding: 16px;
+  border-radius: 12px;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+/* === כרטיסי טקסט לבחירה === */
+.text-card-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 20px;
 }
 
-.design-card {
-  background-color: #ffffff;
-  border: 1px solid #ddd;
-  padding: 15px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+.text-card {
+  background: #ffffff;
+  border: 1px solid #dbe4ef;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.03);
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.text-card.selected {
+  border: 2px solid #7a5cff;
+  background: #f8f6ff;
+}
+
+.text-card-header {
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  transition: 0.3s ease;
-  height: 100%;
+  justify-content: flex-end;
+  margin-bottom: 8px;
 }
 
-.design-card.selected {
-  border: 2px solid #008060;
-  box-shadow: 0 0 10px rgba(0, 128, 96, 0.5);
-}
-
-.design-card img {
+/* === textarea לעריכת הטקסטים === */
+.editable-textarea {
   width: 100%;
-  max-height: 180px;
-  object-fit: cover;
-  border-radius: 8px;
-}
-
-.design-card h3 {
-  font-size: 18px;
-  margin: 12px 0 6px 0;
-  color: #222;
-}
-
-.design-card p {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: auto;
-}
-
-.button-group {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 16px;
-}
-
-.button-group button {
-  flex: 1;
-  margin: 0 5px;
-  padding: 8px 12px;
-  background-color: white;
-  border: 2px solid #008060;
-  color: #008060;
-  font-weight: bold;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: 0.3s ease;
-}
-
-.button-group button:hover {
-  background-color: #008060;
-  color: white;
-}
-
-.continue-button {
-  margin-top: 40px;
-  padding: 14px 30px;
-  background-color: #008060;
-  color: white;
   border: none;
-  border-radius: 8px;
-  font-size: 18px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: 0.3s ease;
+  resize: none;
+  background: transparent;
+  font-size: 15.5px;
+  font-family: inherit;
+  color: #1e293b;
+  line-height: 1.6;
+}
+.editable-textarea:focus {
+  outline: none;
 }
 
-.continue-button:hover {
-  background-color: #006647;
-}
-
-/* Popup styles */
-.popup-overlay {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  background: rgba(0, 0, 0, 0.7);
+/* === גלריית פוסטרים === */
+.design-gallery {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 999;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 20px;
 }
 
-.popup-content {
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  max-width: 90%;
-  max-height: 90%;
-  overflow: auto;
+.design-item {
+  flex: 1 1 180px;
+  max-width: 180px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #ffffff;
+  border: 2px solid transparent;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  transition: 0.2s ease;
+  cursor: pointer;
   text-align: center;
 }
-
-.popup-content img {
-  max-width: 100%;
-  max-height: 80vh;
-  border-radius: 8px;
+.design-item.selected {
+  border-color: #7a5cff;
+  background: #f5f1ff;
+}
+.design-item:hover {
+  transform: scale(1.03);
 }
 
-.popup-content button {
-  margin-top: 15px;
-  padding: 10px 20px;
+.poster-image {
+  width: 100%;
+  height: auto;
+  border-bottom: 1px solid #f1f1f1;
+}
+
+.poster-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+  padding: 10px;
+}
+
+/* === כפתור צפייה בפוסטר === */
+.view-button {
   background-color: #008060;
   color: white;
+  padding: 6px 12px;
   border: none;
-  border-radius: 5px;
-  font-weight: bold;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 6px;
+  transition: background-color 0.2s ease;
+}
+.view-button:hover {
+  background-color: #005f48;
+}
+
+/* === תצוגת פוסטר – מודאל === */
+.modal {
+  background: white;
+  max-width: 90%;
+  max-height: 90%;
+  padding: 20px;
+  border-radius: 12px;
+  position: relative;
+  text-align: center;
+  outline: none;
+}
+
+.modal-img {
+  max-width: 100%;
+  max-height: 80vh;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.overlay {
+  background: rgba(0, 0, 0, 0.65);
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* === כפתור סגירה של המודאל === */
+.close-btn {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+}
+
+/* === כפתור המשך === */
+.bottom-actions {
+  margin-top: 32px;
+  text-align: left;
+}
+
+.next-button {
+  padding: 14px 32px;
+  background: linear-gradient(90deg, #25a4ff, #7a5cff, #c05bff);
+  color: #fff;
+  font-weight: 700;
+  border: none;
+  border-radius: 14px;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(122, 92, 255, 0.25);
+  transition: 0.2s ease;
+}
+.next-button:hover {
+  filter: brightness(1.04);
+}
+.modal {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: 80%;
+  max-width: 600px;
+  margin: auto;
+  position: relative;
+  top: 50%;
+  transform: translateY(50%);
+}
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0,0,0,0.5);
+  z-index: 9999;
+}
+
+.modal-img {
+  width: 100%;
+  height: auto;
+}
+
+.close-btn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: none;
+  border: none;
+  font-size: 20px;
   cursor: pointer;
 }

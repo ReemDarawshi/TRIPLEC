@@ -1,84 +1,99 @@
 .users-page {
   direction: rtl;
-  max-width: 950px;
+  max-width: 1100px;
   margin: 40px auto;
   padding: 30px;
-  background-color: #fdfefe;
-  border-radius: 12px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.05);
-  animation: fadeIn 0.5s ease;
+  background-color: #fdfdfd;
+  border-radius: 16px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+  font-family: 'Segoe UI', Tahoma, sans-serif;
 }
 
 .users-page h2 {
-  font-size: 1.6rem;
-  color: #0d47a1;
-  margin-bottom: 20px;
   text-align: right;
+  font-size: 28px;
+  color: #333;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 8px;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
   background-color: white;
-  animation: slideUp 0.4s ease;
-}
-
-thead {
-  background-color: #e3f2fd;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 th, td {
-  padding: 12px 14px;
-  border-bottom: 1px solid #eee;
+  padding: 14px 16px;
   text-align: right;
+  border-bottom: 1px solid #eee;
 }
 
-input, select {
+th {
+  background-color: #f2f5f9;
+  color: #222;
+  font-weight: 600;
+}
+
+tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+input[type="text"],
+input[type="email"],
+select {
   width: 100%;
-  padding: 6px;
-  border-radius: 5px;
+  padding: 10px 12px;
   border: 1px solid #ccc;
-  font-size: 0.95rem;
+  border-radius: 8px;
+  font-size: 14px;
+  background-color: #fefefe;
+  transition: 0.3s;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: #007bff;
+  background-color: #f5fbff;
+}
+
+.new-user-row input,
+.new-user-row select {
+  background-color: #fff;
 }
 
 .btn-outline {
-  background: white;
-  border: 1px solid #0d47a1;
-  color: #0d47a1;
-  padding: 6px 10px;
-  border-radius: 5px;
+  background-color: #fff;
+  color: #007bff;
+  border: 1px solid #007bff;
+  padding: 8px 16px;
+  border-radius: 8px;
   cursor: pointer;
+  font-size: 14px;
   transition: 0.3s;
 }
 
 .btn-outline:hover {
-  background-color: #e3f2fd;
+  background-color: #007bff;
+  color: #fff;
 }
 
 .btn-danger {
-  background: white;
-  border: 1px solid #c62828;
-  color: #c62828;
-  padding: 6px 10px;
-  border-radius: 5px;
+  background-color: #ff4d4f;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
   cursor: pointer;
+  font-size: 14px;
   transition: 0.3s;
 }
 
 .btn-danger:hover {
-  background-color: #ffebee;
-}
-
-.new-user-row td {
-  background-color: #f9f9f9;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  background-color: #d9363e;
 }

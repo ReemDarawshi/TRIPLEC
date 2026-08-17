@@ -1,80 +1,100 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './CampaignList.css';
 
 interface Campaign {
   id: number;
   title: string;
   channel: string;
-  date: string;
-  time: string;
+  date?: string;
+  time?: string;
   status: 'נשלח' | 'מתוזמן' | 'נכשל';
   sender: string;
 }
 
-const campaigns: Campaign[] = [
-  {
-    id: 1,
-    title: 'מבצע סוף שנה ללקוחות',
-    channel: 'Email',
-    date: '2025-08-10',
-    time: '14:00',
-    status: 'נשלח',
-    sender: 'רות כהן',
-  },
-  {
-    id: 2,
-    title: 'עדכון שעות פעילות לספקים',
-    channel: 'WhatsApp',
-    date: '2025-08-12',
-    time: '09:30',
-    status: 'מתוזמן',
-    sender: 'רים דארוושה',
-  },
-  {
-    id: 3,
-    title: 'קמפיין שנכשל ב־SMS',
-    channel: 'SMS',
-    date: '2025-08-05',
-    time: '18:00',
-    status: 'נכשל',
-    sender: 'דוד לוי',
-  },
-];
-
 const CampaignList: React.FC = () => {
+  const navigate = useNavigate();
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.error('אין טוקן, המשתמש לא מחובר');
+          return;
+        }
+
+        const res = await fetch('http://localhost:5000/api/campaigns/summary', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        const data = await res.json();
+        if (!Array.isArray(data)) {
+          console.error('הנתונים שהתקבלו אינם מערך:', data);
+          return;
+        }
+
+        setCampaigns(data);
+      } catch (err) {
+        console.error('שגיאה בקבלת קמפיינים:', err);
+      }
+    };
+
+    fetchCampaigns();
+  }, []);
+
   const handleView = (id: number) => {
-    alert(`צפייה בקמפיין ID: ${id}`);
-    // בעתיד: navigate(`/campaigns/${id}/preview`)
+    navigate(`/preview/${id}`);
   };
 
   const handleDelete = (id: number) => {
     alert(`מחיקת קמפיין ID: ${id}`);
-    // בעתיד: שליחה ל־backend למחיקה
   };
+
+  const filteredCampaigns = campaigns.filter((c) =>
+    c.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="campaign-list-container">
       <h2 className="page-title">רשימת קמפיינים</h2>
+
+      <div className="search-bar">
+        <input
+          type="text"
+          placeholder="🔍 חיפוש לפי כותרת..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
 
       <table className="campaign-table">
         <thead>
           <tr>
             <th>כותרת</th>
             <th>ערוץ</th>
-            <th>תאריך</th>
             <th>סטטוס</th>
             <th>על ידי</th>
             <th>פעולות</th>
           </tr>
         </thead>
         <tbody>
-          {campaigns.map((c) => (
+          {filteredCampaigns.map((c) => (
             <tr key={c.id}>
               <td>{c.title}</td>
               <td>{c.channel}</td>
-              <td>{`${c.date} ${c.time}`}</td>
               <td>
-                <span className={`status ${c.status === 'נשלח' ? 'sent' : c.status === 'מתוזמן' ? 'scheduled' : 'failed'}`}>
+                <span className={`status-badge ${
+                  c.status === 'נשלח'
+                    ? 'sent'
+                    : c.status === 'מתוזמן'
+                    ? 'scheduled'
+                    : 'failed'
+                }`}>
                   {c.status}
                 </span>
               </td>

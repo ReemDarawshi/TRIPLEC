@@ -1,161 +1,207 @@
-/* Settings.css  */
-.settings-page {
+/* === מיכל כללי === */
+.settings-container {
   direction: rtl;
   max-width: 1100px;
-  margin: 40px auto;
-  padding: 40px;
-  background-color: #f2f6fb;
-  border-radius: 16px;
-  box-shadow: 0 0 40px rgba(0, 0, 0, 0.04);
-  animation: fadeIn 0.5s ease;
-  font-family: 'Heebo', sans-serif;
+  margin: 60px auto;
+  padding: 20px;
 }
 
-.settings-page h2 {
-  font-size: 2rem;
-  color: #0d47a1;
-  margin-bottom: 30px;
-  text-align: right;
+/* === כותרת ראשית של העמוד === */
+.settings-title {
+  font-size: 28px;
+  font-weight: 900;
+  color: #1f2937;
+  margin-bottom: 40px;
+  display: inline-block;
+  position: relative;
 }
-
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
-}
-
-label {
-  font-size: 1rem;
-  color: #333;
-  display: flex;
-  flex-direction: column;
-  text-align: right;
-}
-
-input[type="text"],
-textarea,
-select,
-input[type="color"] {
+.settings-title::after {
+  content: "";
+  display: block;
+  width: 160px;
+  height: 4px;
   margin-top: 8px;
-  padding: 10px;
-  font-size: 1rem;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  background-color: #f9f9f9;
+  background: linear-gradient(90deg, #25a4ff, #7a5cff, #c05bff);
+  border-radius: 999px;
 }
 
-textarea {
+/* === בלוק כללי לטופס (כמו כרטיס) === */
+.form-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 24px;
+  margin-bottom: 32px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.03);
+}
+
+/* === כותרת של כל בלוק טופס === */
+.section-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1f3c55;
+  border-right: 4px solid #2563eb;
+  padding-right: 12px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* === שדות טקסט === */
+.form-section input[type="text"],
+.form-section textarea,
+.form-section select {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 15.5px;
+  border: 1px solid #dbe4ef;
+  border-radius: 12px;
+  background: #f9fafb;
+  margin-bottom: 16px;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+.form-section input:focus,
+.form-section textarea:focus,
+.form-section select:focus {
+  border-color: #7aa7ff;
+  box-shadow: 0 0 0 4px rgba(122, 167, 255, 0.2);
+  outline: none;
+}
+.form-section textarea {
+  height: 130px;
   resize: vertical;
-  min-height: 80px;
+  line-height: 1.6;
 }
 
-input[type="file"] {
-  margin-top: 10px;
+/* === כפתור העלאה מעוצב === */
+.upload-button {
+  display: inline-block;
+  padding: 10px 18px;
+  background-color: #f1f9ff;
+  color: #0d47a1;
+  font-weight: bold;
+  border-radius: 8px;
+  border: 2px solid #90caf9;
+  cursor: pointer;
+  transition: 0.2s ease;
+  margin-bottom: 12px;
+}
+.upload-button:hover {
+  background-color: #e3f2fd;
+  color: #0d47a1;
+  border-color: #42a5f5;
 }
 
-.color-palette {
+/* === תצוגת preview === */
+.gallery-preview {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  align-items: center;
-  margin-top: 10px;
-}
-
-.color-circle {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  border: 1px solid #ccc;
-  position: relative;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.color-circle:hover::after {
-  content: '×';
-  color: white;
-  background: rgba(0, 0, 0, 0.5);
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: absolute;
-  top: 0;
-  right: 0;
-  font-size: 1.2rem;
-}
-
-.add-color-btn {
-  background: transparent;
-  border: 2px dashed #999;
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 1.5rem;
-  color: #777;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.gallery-preview {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 20px;
+  gap: 12px;
   margin-top: 12px;
 }
 
-.gallery-item {
+.gallery-item,
+.preview-item.removable {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 6px;
+  width: 120px;
   text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  position: relative;
 }
 
-.gallery-item img {
+.gallery-item img,
+.preview-item.removable img {
   width: 100%;
-  height: 100px;
-  object-fit: cover;
-  border-radius: 6px;
-  border: 1px solid #ddd;
-}
-.preview-item img {
-  max-width: 120px;
-  max-height: 120px;
-  border-radius: 6px;
-  margin-top: 0.5rem;
+  border-radius: 10px;
   object-fit: cover;
 }
 
 .gallery-item p {
-  margin-top: 6px;
-  font-size: 0.85rem;
-  color: #444;
+  font-size: 12px;
+  margin-top: 4px;
+  color: #334155;
+  font-weight: 600;
 }
 
-.btn-save {
-  background-color: #0d47a1;
+/* === כפתור מחיקה עגול קטן על התמונות === */
+.remove-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #ef4444;
   color: white;
-  padding: 14px;
-  font-size: 1rem;
   border: none;
-  border-radius: 6px;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  font-size: 14px;
   cursor: pointer;
-  transition: background 0.3s ease;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+}
+.remove-btn:hover {
+  background: #dc2626;
 }
 
-.btn-save:hover {
-  background-color: #1565c0;
+/* === צבעים – פלטת צבעים עגולים === */
+.color-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+}
+.color-circle {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid #e2e8f0;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+.color-circle:hover {
+  transform: scale(1.1);
+}
+.color-palette input[type="color"] {
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: none;
+  cursor: pointer;
 }
 
-small {
-  font-size: 0.85rem;
-  color: #777;
-  margin-top: 6px;
-  display: block;
+/* === כפתור \"הוסף\" צבע חדש === */
+.color-palette button {
+  margin-right: 10px;
+  padding: 6px 10px;
+  font-size: 14px;
+  border-radius: 10px;
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #7dd3fc;
+  font-weight: 600;
+  cursor: pointer;
+}
+.color-palette button:hover {
+  background: #bae6fd;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+/* === כפתור שמירה גדול ואלגנטי === */
+.save-button {
+  width: 100%;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  color: white;
+  background: linear-gradient(90deg, #10b981, #14b8a6);
+  border: none;
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(16, 185, 129, 0.25);
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+.save-button:hover {
+  filter: brightness(1.04);
 }

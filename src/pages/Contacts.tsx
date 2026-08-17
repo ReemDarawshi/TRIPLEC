@@ -1,32 +1,72 @@
-import React, { useState } from 'react';
+/**
+ * Contacts.tsx
+ * ---------------------
+ * רכיב לניהול אנשי קשר בעסק עבור מערכת TRIPLE.
+ * 
+ * תכונות עיקריות:
+ * - שליפת אנשי קשר מהשרת לפי business_id.
+ * - הצגה של טבלת אנשי קשר עם אפשרות לעריכה ישירה בטבלה (inline).
+ * - אפשרות הוספה של איש קשר חדש בטבלה.
+ * - חיפוש דינמי בטבלה לפי שם, מייל, טלפון או תפקיד.
+ * - שמירה מרוכזת של כל העריכות דרך קריאה ל־bulk endpoint.
+ * - מחיקת איש קשר בודד מהשרת.
+ * 
+ * ממשק ה־UI:
+ * - שורת טופס להוספת איש קשר חדש בראש הטבלה.
+ * - כפתור שמירה של כל השינויים.
+ * - מחיקה בודדת לכל שורה קיימת.
+ *  */
+
+import React, { useEffect, useState } from 'react';
 import './Contacts.css';
+import axios from 'axios';
 
 interface Contact {
   id: number;
-  name: string;
+  first_name: string;
+  last_name: string;
   email: string;
   phone: string;
   role: 'לקוח' | 'ספק' | 'סוכן';
   vip: boolean;
 }
 
-const initialContacts: Contact[] = [
-  { id: 1, name: 'רים דארוושה', email: 'reem@example.com', phone: '050-1234567', role: 'לקוח', vip: true },
-  { id: 2, name: 'אחמד סולטן', email: 'ahmad@example.com', phone: '052-8765432', role: 'סוכן', vip: false },
-  { id: 3, name: 'יעל כהן', email: 'yael@example.com', phone: '053-4567890', role: 'ספק', vip: false },
-];
-
 const Contacts: React.FC = () => {
-  const [contacts, setContacts] = useState<Contact[]>(initialContacts);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [newContact, setNewContact] = useState<Contact>({
     id: 0,
-    name: '',
+    first_name: '',
+    last_name: '',
     email: '',
     phone: '',
     role: 'לקוח',
     vip: false,
   });
+
+  const token = localStorage.getItem("token");
+  const businessId = localStorage.getItem("business_id");
+
+  // הבאת אנשי קשר מהשרת
+  useEffect(() => {
+    if (!businessId) {
+      console.error("חסר business_id");
+      return;
+    }
+
+    fetch(`http://localhost:5000/api/contacts?business_id=${businessId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (!Array.isArray(data)) {
+          console.error("ציפיתי למערך אך קיבלתי:", data);
+          return;
+        }
+        setContacts(data);
+      })
+      .catch(err => console.error('שגיאה בטעינת אנשי קשר:', err));
+  }, [businessId, token]);
 
   const handleFieldChange = (id: number, field: keyof Contact, value: string | boolean) => {
     setContacts(prev =>
@@ -34,23 +74,107 @@ const Contacts: React.FC = () => {
     );
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: number) => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    alert("חסר טוקן");
+    return;
+  }
+
+  try {
+    await axios.delete(`http://localhost:5000/api/contacts/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
     setContacts(prev => prev.filter(c => c.id !== id));
-  };
+    alert("🗑️ איש הקשר נמחק בהצלחה");
+  } catch (error) {
+    console.error("שגיאה במחיקת איש קשר:", error);
+    alert(" שגיאה במחיקת איש קשר");
+  }
+};
 
-  const handleSave = () => {
-    alert('✅ השינויים נשמרו (כרגע בזיכרון בלבד)');
-  };
 
-  const handleAddContact = () => {
-    if (!newContact.name.trim()) return;
-    const newEntry = { ...newContact, id: Date.now() };
-    setContacts(prev => [newEntry, ...prev]);
-    setNewContact({ id: 0, name: '', email: '', phone: '', role: 'לקוח', vip: false });
-  };
+const handleAddContact = async () => {
+  const token = localStorage.getItem('token');
+  const businessId = localStorage.getItem('business_id');
+
+  if (!newContact.first_name.trim() || !businessId || !token) {
+    alert("חסרים פרטים");
+    return;
+  }
+
+  try {
+    const response = await axios.post("http://localhost:5000/api/contacts", {
+      ...newContact,
+      business_id: businessId, 
+    }, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      }
+    });
+
+    const savedContact = {
+      ...newContact,
+      id: response.data.id
+    };
+
+    setContacts(prev => [savedContact, ...prev]);
+    setNewContact({
+      id: 0,
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone: '',
+      role: 'לקוח',
+      vip: false,
+    });
+    alert("איש קשר נוסף בהצלחה!");
+  } catch (err) {
+    console.error("שגיאה בשמירת איש קשר:", err);
+    alert("שגיאה בשמירה");
+  }
+};
+
+    const handleSave = async () => {
+  if (!token) {
+    alert("חסר טוקן");
+    return;
+  }
+
+  try {
+    await Promise.all(
+      contacts.map((contact) =>
+        axios.put(
+          `http://localhost:5000/api/contacts/${contact.id}`,
+          {
+            first_name: contact.first_name,
+            last_name: contact.last_name,
+            email: contact.email,
+            phone: contact.phone,
+            role: contact.role,
+            vip: contact.vip,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        )
+      )
+    );
+
+    alert("אנשי הקשר נשמרו בהצלחה!");
+  } catch (error) {
+    console.error("שגיאה בשמירת אנשי קשר:", error);
+    alert("שמירת אנשי הקשר נכשלה");
+  }
+};
 
   const filteredContacts = contacts.filter(c =>
-    [c.name, c.email, c.phone, c.role]
+    [c.first_name, c.last_name, c.email, c.phone, c.role]
       .filter(Boolean)
       .some(field => field.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -72,7 +196,8 @@ const Contacts: React.FC = () => {
         <thead>
           <tr>
             <th>VIP</th>
-            <th>שם</th>
+            <th>שם פרטי</th>
+            <th>שם משפחה</th>
             <th>אימייל</th>
             <th>טלפון</th>
             <th>תפקיד</th>
@@ -80,7 +205,7 @@ const Contacts: React.FC = () => {
           </tr>
         </thead>
         <tbody>
-          {/* שורת הוספה – בראש */}
+          {/* שורת הוספה */}
           <tr className="add-row">
             <td>
               <input
@@ -92,9 +217,17 @@ const Contacts: React.FC = () => {
             <td>
               <input
                 type="text"
-                placeholder="שם"
-                value={newContact.name}
-                onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
+                placeholder="שם פרטי"
+                value={newContact.first_name}
+                onChange={(e) => setNewContact({ ...newContact, first_name: e.target.value })}
+              />
+            </td>
+            <td>
+              <input
+                type="text"
+                placeholder="שם משפחה"
+                value={newContact.last_name}
+                onChange={(e) => setNewContact({ ...newContact, last_name: e.target.value })}
               />
             </td>
             <td>
@@ -141,8 +274,15 @@ const Contacts: React.FC = () => {
               <td>
                 <input
                   type="text"
-                  value={c.name}
-                  onChange={(e) => handleFieldChange(c.id, 'name', e.target.value)}
+                  value={c.first_name}
+                  onChange={(e) => handleFieldChange(c.id, 'first_name', e.target.value)}
+                />
+              </td>
+              <td>
+                <input
+                  type="text"
+                  value={c.last_name}
+                  onChange={(e) => handleFieldChange(c.id, 'last_name', e.target.value)}
                 />
               </td>
               <td>

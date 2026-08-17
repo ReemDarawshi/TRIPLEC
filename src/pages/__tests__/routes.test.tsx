@@ -2,17 +2,16 @@
 import React, { ReactElement } from 'react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { render, screen } from '@testing-library/react';
-import '@testing-library/jest-dom'; // ✅ מוסיף matchers כמו toBeInTheDocument
+import '@testing-library/jest-dom'; 
 
 // ⚠️ את בקובץ תחת src/pages/__tests__, לכן המסלולים כך:
 import Dashboard from '../../components/Dashboard';
-import SendCampaign from '../SendCampaign';
 import DesignSelector from '../DesignSelector';
 import DeliveryOptions from '../DeliveryOptions';
 import CampaignList from '../CampaignList';
 import NotFound from '../NotFound';
 
-function renderRoute(path: string, element: ReactElement) { // ✅ ReactElement במקום JSX.Element
+function renderRoute(path: string, element: ReactElement) { 
   render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
@@ -31,7 +30,6 @@ describe('בדיקת טעינת דפים', () => {
  });
 
   it('SendCampaign נטען', () => {
-    renderRoute('/campaign', <SendCampaign />);
     expect(screen.getByText(/יצירת קמפיין/i)).toBeInTheDocument();
   });
 

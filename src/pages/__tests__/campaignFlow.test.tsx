@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import '@testing-library/jest-dom';
 import App from '../../App';
 
 // כדי לשלוט בטיימר של חלון השליחה (5 שניות)

@@ -1,3 +1,35 @@
+/* 
+  שורות אלו שייכות ל-Tailwind CSS.
+  אם מוצגת שגיאה "Unknown at rule @tailwind",
+  זה נובע מכך ש־VSCode לא מזהה את Tailwind.
+  ודא ש־Tailwind מותקן כראוי ושה־PostCSS מוגדר.
+*/
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@font-face {
+  font-family: 'Arima-VariableFont_wght';
+  src: url('http://localhost:5000/static/fonts/Arima-VariableFont_wght.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Borel-Regular';
+  src: url('http://localhost:5000/static/fonts/Borel-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Pacifico-Regular';
+  src: url('http://localhost:5000/static/fonts/Pacifico-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'RubikDistressed-Regular';
+  src: url('http://localhost:5000/static/fonts/RubikDistressed-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'RubikGemstones-Regular';
+  src: url('http://localhost:5000/static/fonts/RubikGemstones-Regular.ttf') format('truetype');
+}

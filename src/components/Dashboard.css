@@ -1,124 +1,130 @@
 .dashboard-container {
   direction: rtl;
-  padding: 30px;
-  background: #f8f9fa;
-  min-height: 100vh;
-  animation: fadein 1s ease-in;
+  padding: 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: #f9fbfd;
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+  animation: fadeIn 0.6s ease;
 }
 
-@keyframes fadein {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+.page-title {
+  font-size: 28px;
+  font-weight: bold;
+  color: #008080;
+  margin-bottom: 10px;
+  text-align: right;
 }
 
-.sub-title {
-  color: #6c757d;
+.dashboard-subtitle {
+  font-size: 16px;
+  color: #666;
   margin-bottom: 30px;
-  font-size: 1rem;
+  text-align: right;
 }
 
-.cards-row {
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
   margin-bottom: 40px;
 }
 
 .stat-card {
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+  background: #ffffff;
+  border-radius: 14px;
   padding: 20px;
-  flex: 1;
-  min-width: 220px;
-  transition: transform 0.3s ease, box-shadow 0.3s;
-  border-top: 4px solid #0d6efd;
-  position: relative;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease;
 }
 
 .stat-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 6px 24px rgba(0,0,0,0.1);
 }
 
 .stat-card h3 {
-  font-size: 1.1rem;
-  color: #0d6efd;
+  font-size: 18px;
   margin-bottom: 10px;
-  font-weight: 600;
+  color: #333;
 }
 
 .stat-card p {
-  font-size: 1.5rem;
+  font-size: 26px;
   font-weight: bold;
-  color: #212529;
+  color: #0bacac;
   margin: 0;
 }
 
 .stat-card small {
-  color: #6c757d;
-  font-size: 0.85rem;
+  color: #999;
+  font-size: 14px;
 }
 
-.quick-btn {
-  background-color: #e8f0ff;
-  color: #0d6efd;
-  padding: 6px 10px;
+.stat-card.shortcut .shortcut-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.shortcut-buttons button {
+  background-color: #00c896;
+  color: white;
   border: none;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  margin: 4px 0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
   cursor: pointer;
-  transition: background-color 0.2s ease;
-  width: 100%;
 }
 
-.quick-btn:hover {
-  background-color: #d0e4ff;
+.shortcut-buttons button:hover {
+  background-color: #00b28c;
 }
 
-.chart-section {
-  background: white;
+.chart-container {
+  background: #ffffff;
   border-radius: 16px;
   padding: 25px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-  margin-top: 40px;
-  position: relative;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
 }
 
-.chart-section h4 {
-  font-size: 1.2rem;
+.chart-container h3 {
+  font-size: 20px;
   margin-bottom: 20px;
-  color: #343a40;
+  color: #444;
+  text-align: right;
 }
 
-.chart-toggle {
-  position: absolute;
-  top: 25px;
-  left: 25px;
-  font-size: 0.85rem;
-  background: #0d6efd;
-  color: white;
-  padding: 4px 10px;
-  border: none;
-  border-radius: 6px;
+.toggle-btn {
+  margin-left: 10px;
+  padding: 8px 16px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  background-color: #f1f5f8;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.3s;
+  transition: all 0.2s ease;
 }
 
-.chart-toggle:hover {
-  background: #0a58ca;
+.toggle-btn.active {
+  background-color: #00c896;
+  color: white;
+  border-color: #00c896;
 }
 
-.recharts-legend-item text {
-  font-size: 0.9rem;
-  font-weight: bold;
-  fill: #333 !important;
+.toggle-btn:hover {
+  background-color: #d9eff0;
 }
 
-.recharts-legend-item rect {
-  rx: 4;
-  ry: 4;
-  stroke: #ccc;
-  stroke-width: 1;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
