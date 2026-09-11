@@ -12,6 +12,9 @@ from backend import config
 from PIL import Image, ImageDraw, ImageFont
 from backend.helpers.poster_generator import generate_posters_from_gallery  
 import traceback
+from backend.helpers.creative_director import generate_creative_blueprints
+from backend.helpers.html_poster_renderer import render_blueprint_poster
+
 
 client = OpenAI(api_key=config.Config.OPENAI_API_KEY)
 
@@ -428,32 +431,77 @@ def generate_campaign_text(prompt, brand, campaign):
 @jwt_required()
 def generate_posters_from_gallery_route():
     try:
-        data = request.get_json()
-        prompt = data.get("prompt", "")
-        campaign_id = int(data.get("campaign_id", 0))
+        data = request.get_json() or {}
 
-        campaign = Campaign.query.get(campaign_id)
+        campaign_id = data.get("campaign_id")
+        selected_text = (data.get("selected_text") or "").strip()
+
+        if not campaign_id:
+            return jsonify({"error": "Missing campaign_id"}), 400
+
+        current_user = User.query.get(get_jwt_identity())
+
+        if not current_user:
+            return jsonify({"error": "Unauthorized"}), 403
+
+        campaign = Campaign.query.filter_by(
+            campaign_id=campaign_id,
+            business_id=current_user.business_id
+        ).first()
+
         if not campaign:
             return jsonify({"error": "Campaign not found"}), 404
 
-        brand = BrandSettings.query.filter_by(business_id=campaign.business_id).first()
+        brand = BrandSettings.query.filter_by(
+            business_id=current_user.business_id
+        ).first()
+
         if not brand:
             return jsonify({"error": "Brand settings not found"}), 404
 
-        poster_paths = generate_posters_from_gallery(prompt, brand, campaign)
+        result = generate_creative_blueprints(
+            client=client,
+            brand=brand,
+            campaign=campaign,
+            selected_text=selected_text
+        )
 
-        poster_list = []
-        for i, path in enumerate(poster_paths):
-            poster_list.append({
-                "id": f"p{i+1}",
-                "imageSrc": path,
-                "title": f"עיצוב {i+1}",
-                "description": campaign.name
+        blueprints = result.get("blueprints", [])
+
+        posters = []
+
+        for blueprint in blueprints:
+            rendered = render_blueprint_poster(
+                brand_settings=brand,
+                blueprint=blueprint,
+                campaign_id=campaign.campaign_id
+            )
+
+            posters.append({
+                "id": blueprint.get("id"),
+                "title": blueprint.get("headline", ""),
+                "description": blueprint.get("art_direction", ""),
+                "creative_type": blueprint.get("creative_type"),
+                "creative_kind": blueprint.get("creative_kind"),
+                "imageSrc": rendered["image_url"],
+                "blueprint": blueprint
             })
 
-        return jsonify({"posters": poster_list}), 200
+        return jsonify({
+            "posters": posters
+        }), 200
+
+    except ValueError as e:
+        print("Creative Director validation error:", e)
+
+        return jsonify({
+            "error": str(e)
+        }), 400
 
     except Exception as e:
-        print(" Poster generation error:", e)
+        print("Creative Director error:", e)
         traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+
+        return jsonify({
+            "error": "Failed to generate creative blueprints"
+        }), 500

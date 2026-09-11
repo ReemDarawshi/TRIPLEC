@@ -4,13 +4,16 @@ import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import Blueprint, request, jsonify, current_app
 from backend.email_sender import send_email
+from flask_jwt_extended import create_access_token
+
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    data = request.get_json()
+    data = request.get_json() or {}
+
     email = data.get('email')
     password = data.get('password')
 
@@ -19,24 +22,25 @@ def login():
     if not user or not check_password_hash(user.password_hash, password):
         return jsonify({'error': 'Invalid credentials'}), 401
 
-    token = jwt.encode({
-    'sub': str(user.id),
-    'role': user.role,
-    'business_id': user.business_id,  
-    'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=12)
-    }, current_app.config['SECRET_KEY'], algorithm='HS256')
-
+    token = create_access_token(
+        identity=str(user.id),
+        additional_claims={
+            'role': user.role,
+            'business_id': user.business_id
+        }
+    )
 
     return jsonify({
-    'token': token,
-    'user': {
-        'id': user.id,
-        'full_name': user.full_name,
-        'email': user.email,
-        'role': user.role,
-        'business_id': user.business_id  
-    }
-})
+        'token': token,
+        'user': {
+            'id': user.id,
+            'full_name': user.full_name,
+            'email': user.email,
+            'role': user.role,
+            'business_id': user.business_id
+        }
+    }), 200
+
 def decode_token(token):
     try:
         payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
