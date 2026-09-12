@@ -1120,6 +1120,162 @@ def render_blueprint_poster(
         ""
     )
 
+    graphic_direction = (
+    blueprint.get("graphic_direction")
+    or {}
+    )
+
+    visual_style = str(
+        graphic_direction.get("visual_style", "")
+    ).lower()
+
+    shape_language = str(
+        graphic_direction.get("shape_language", "")
+    ).lower()
+
+    background_treatment = str(
+        graphic_direction.get("background_treatment", "")
+    ).lower()
+
+    typography_treatment = str(
+        graphic_direction.get("typography_treatment", "")
+    ).lower()
+
+    special_element = str(
+        graphic_direction.get("special_element", "")
+    ).lower()
+
+    graphic_signature = " ".join([
+        visual_style,
+        shape_language,
+        background_treatment,
+        typography_treatment,
+        special_element,
+    ])
+
+    graphic_seed = sum(
+        ord(char)
+        for char in graphic_signature
+    )
+
+    graphic_variant = graphic_seed % 4
+
+    background_variant = (graphic_seed // 4) % 4
+    typography_variant = (graphic_seed // 16) % 4
+
+    
+    graphic_backgrounds = [
+    # Brand Dark
+    f"""
+    linear-gradient(
+        145deg,
+        #111827 0%,
+        {secondary_color} 52%,
+        {primary_color} 100%
+    )
+    """,
+
+    # Brand Light
+    f"""
+    radial-gradient(
+        circle at 80% 20%,
+        {primary_color}22,
+        transparent 32%
+    ),
+    linear-gradient(
+        135deg,
+        #f8fafc 0%,
+        #eef2f7 100%
+    )
+    """,
+
+    # Bold Brand Gradient
+    f"""
+    radial-gradient(
+        circle at 20% 25%,
+        rgba(255,255,255,.18),
+        transparent 30%
+    ),
+    linear-gradient(
+        135deg,
+        {primary_color} 0%,
+        {secondary_color} 55%,
+        #111827 100%
+    )
+    """,
+
+    # Editorial Neutral
+    f"""
+    linear-gradient(
+        160deg,
+        #f8fafc 0%,
+        #e5e7eb 62%,
+        {primary_color} 160%
+    )
+    """
+    ]
+
+    graphic_typography_styles = [
+        """
+        letter-spacing:-2px;
+        font-weight:900;
+        """,
+
+        """
+        letter-spacing:1px;
+        font-weight:700;
+        """,
+
+        """
+        letter-spacing:-4px;
+        font-weight:900;
+        line-height:.94;
+        """,
+
+        """
+        letter-spacing:3px;
+        font-weight:800;
+        """
+    ]
+
+    poster_background = f"""
+    radial-gradient(
+        circle at 20% 20%,
+        {primary_color},
+        transparent 45%
+    ),
+    linear-gradient(
+        135deg,
+        {secondary_color},
+        {primary_color}
+    )
+    """
+
+    headline_extra_css = ""
+
+    content_color = "white"
+    cta_background = "white"
+    cta_color = secondary_color
+
+    if creative_kind == "pure_graphic":
+        if background_variant in [1, 3]:
+            content_color = "#111827"
+            cta_background = primary_color
+            cta_color = "white"
+
+    if creative_kind == "pure_graphic":
+        poster_background = (
+        graphic_backgrounds[
+            background_variant
+        ]
+    )
+
+    headline_extra_css = (
+        graphic_typography_styles[
+            typography_variant
+        ]
+    )
+
     text_position = composition.get(
         "text_position",
         "center"
@@ -1301,20 +1457,43 @@ def render_blueprint_poster(
     graphic_html = ""
 
     if creative_kind == "pure_graphic":
-        graphic_html = """
-    <div class="graphic-orbit"></div>
-    <div class="graphic-frame"></div>
-    <div class="graphic-line"></div>
-    <div class="graphic-dot"></div>
-    """
+
+        if graphic_variant == 0:
+            graphic_html = """
+            <div class="graphic-orbit"></div>
+            <div class="graphic-frame"></div>
+            <div class="graphic-line"></div>
+            <div class="graphic-dot"></div>
+            """
+
+        elif graphic_variant == 1:
+            graphic_html = """
+            <div class="graphic-circle-large"></div>
+            <div class="graphic-circle-small"></div>
+            <div class="graphic-diagonal"></div>
+            """
+
+        elif graphic_variant == 2:
+            graphic_html = """
+            <div class="graphic-grid"></div>
+            <div class="graphic-block"></div>
+            <div class="graphic-accent-line"></div>
+            """
+
+        else:
+            graphic_html = """
+            <div class="graphic-blob-one"></div>
+            <div class="graphic-blob-two"></div>
+            <div class="graphic-ring"></div>
+            """
 
     elif creative_kind == "generated_visual":
         graphic_html = """
-    <div class="visual-glow visual-glow-one"></div>
-    <div class="visual-glow visual-glow-two"></div>
-    <div class="visual-horizon"></div>
-    <div class="visual-light"></div>
-    """
+        <div class="visual-glow visual-glow-one"></div>
+        <div class="visual-glow visual-glow-two"></div>
+        <div class="visual-horizon"></div>
+        <div class="visual-light"></div>
+        """
 
     output_name = (
         f"campaign_{campaign_id}_"
@@ -1360,10 +1539,7 @@ def render_blueprint_poster(
                 overflow:hidden;
 
                 background:
-                    radial-gradient(
-                        circle at 20% 20%,
-                        {primary_color},
-                        transparent 45%
+                    {poster_background};
                     ),
                     linear-gradient(
                         135deg,
@@ -1400,7 +1576,7 @@ def render_blueprint_poster(
 
                 text-align:{alignment};
                 z-index:10;
-                color:white;
+                color:{content_color};
             }}
 
             .headline {{
@@ -1412,6 +1588,7 @@ def render_blueprint_poster(
 
                 line-height:1.02;
                 font-weight:900;
+                {headline_extra_css}
                 margin-bottom:28px;
                 text-shadow:
                     0 6px 25px
@@ -1429,8 +1606,8 @@ def render_blueprint_poster(
                 display:inline-block;
                 padding:17px 32px;
                 border-radius:999px;
-                background:white;
-                color:{secondary_color};
+                background:{cta_background};
+                color:{cta_color};
                 font-size:25px;
                 font-weight:800;
             }}
@@ -1495,14 +1672,114 @@ def render_blueprint_poster(
             }}
 
             .graphic-dot {{
+                        /* PURE GRAPHIC - VARIANT 1 */
+            .graphic-circle-large {{
                 position:absolute;
-                width:90px;
-                height:90px;
+                width:520px;
+                height:520px;
                 border-radius:50%;
-                background:rgba(255,255,255,.16);
-                right:130px;
-                top:160px;
+                border:55px solid rgba(255,255,255,.12);
+                right:-120px;
+                top:-100px;
                 z-index:1;
+            }}
+
+            .graphic-circle-small {{
+                position:absolute;
+                width:120px;
+                height:120px;
+                border-radius:50%;
+                background:rgba(255,255,255,.18);
+                left:120px;
+                bottom:150px;
+                z-index:1;
+            }}
+
+            .graphic-diagonal {{
+                position:absolute;
+                width:720px;
+                height:7px;
+                background:rgba(255,255,255,.25);
+                left:-80px;
+                bottom:270px;
+                transform:rotate(-18deg);
+                z-index:1;
+            }}
+
+            /* PURE GRAPHIC - VARIANT 2 */
+            .graphic-grid {{
+                position:absolute;
+                inset:70px;
+                background-image:
+                    linear-gradient(
+                        rgba(255,255,255,.08) 1px,
+                        transparent 1px
+                    ),
+                    linear-gradient(
+                        90deg,
+                        rgba(255,255,255,.08) 1px,
+                        transparent 1px
+                    );
+                background-size:70px 70px;
+                z-index:1;
+            }}
+
+            .graphic-block {{
+                position:absolute;
+                width:300px;
+                height:300px;
+                background:rgba(255,255,255,.10);
+                right:90px;
+                bottom:80px;
+                transform:rotate(8deg);
+                z-index:1;
+            }}
+
+            .graphic-accent-line {{
+                position:absolute;
+                width:9px;
+                height:520px;
+                background:rgba(255,255,255,.30);
+                left:120px;
+                top:140px;
+                z-index:1;
+            }}
+
+            /* PURE GRAPHIC - VARIANT 3 */
+            .graphic-blob-one {{
+                position:absolute;
+                width:620px;
+                height:430px;
+                border-radius:55% 45% 60% 40%;
+                background:rgba(255,255,255,.10);
+                top:-130px;
+                right:-160px;
+                transform:rotate(18deg);
+                z-index:1;
+            }}
+
+            .graphic-blob-two {{
+                position:absolute;
+                width:420px;
+                height:420px;
+                border-radius:48% 52% 38% 62%;
+                background:rgba(255,255,255,.08);
+                left:-120px;
+                bottom:-100px;
+                transform:rotate(-12deg);
+                z-index:1;
+            }}
+
+            .graphic-ring {{
+                position:absolute;
+                width:260px;
+                height:260px;
+                border-radius:50%;
+                border:28px solid rgba(255,255,255,.16);
+                right:120px;
+                bottom:120px;
+                z-index:1;
+            }}
             }}
 
             /* GENERATED VISUAL PLACEHOLDER */
