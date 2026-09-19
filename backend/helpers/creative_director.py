@@ -1,5 +1,7 @@
+from backend.helpers.brand_display_name import get_brand_display_name
 import json
 import uuid
+import re
 
 
 def _parse_json_list(value):
@@ -65,7 +67,48 @@ def _clean_gallery(brand):
     return cleaned
 
 
-def _validate_blueprints(blueprints, gallery):
+def _validate_poster_language(blueprints, preferred_language, business_name):
+    """Cheap script check only; does not judge grammar or marketing quality.
+
+    Reject wrong-script copy before rendering. Do not request an extra AI call.
+    An exact official localized business name is permitted as a standalone field.
+    """
+    language = str(preferred_language or "עברית").strip().lower()
+    if language in ("ערבית", "arabic", "ar"):
+        expected = re.compile(r"[\u0621-\u064a\u066e-\u06d3]")
+        forbidden = re.compile(r"[\u0590-\u05ff]")
+    elif language in ("עברית", "hebrew", "he"):
+        expected = re.compile(r"[\u05d0-\u05ea]")
+        forbidden = re.compile(r"[\u0621-\u064a\u066e-\u06d3]")
+    elif language in ("אנגלית", "english", "en"):
+        expected = re.compile(r"[A-Za-z]")
+        forbidden = re.compile(r"[\u0590-\u05ff\u0621-\u064a\u066e-\u06d3]")
+    else:
+        return  # An unknown language needs a separate product decision.
+
+    official_name = str(business_name or "").strip()
+    for number, blueprint in enumerate(blueprints, start=1):
+        for field in ("headline", "subheadline", "cta"):
+            value = blueprint.get(field, "")
+            if not isinstance(value, str):
+                raise ValueError(
+                    f"Poster {number} has a non-text {field}"
+                )
+            text = value.strip()
+            if not text:
+                if field == "headline":
+                    raise ValueError(f"Poster {number} is missing a headline")
+                continue  # Subheadline and CTA may be omitted.
+            if official_name and text == official_name:
+                continue
+            if forbidden.search(text) or not expected.search(text):
+                raise ValueError(
+                    f"Poster {number} has {field} in the wrong language"
+                )
+
+
+def _validate_blueprints(blueprints, gallery, preferred_language="עברית", business_name=""):
+
     if not isinstance(blueprints, list):
         raise ValueError("Creative Director did not return a list")
 
@@ -101,14 +144,32 @@ def _validate_blueprints(blueprints, gallery):
         for item in gallery
     }
 
+    # Three distinct selection roles, with an explanation grounded in the
+    # supplied gallery descriptions (not inferred from fabricated image facts).
+    expected_roles = (
+        "message_fit",
+        "visual_impact",
+        "complementary_relevance",
+    )
     chosen_indexes = []
 
-    for blueprint in brand_assets:
+    for blueprint, expected_role in zip(brand_assets, expected_roles):
         gallery_index = blueprint.get("gallery_index")
 
-        if gallery_index not in valid_indexes:
+        if type(gallery_index) is not int or gallery_index not in valid_indexes:
             raise ValueError(
                 f"Invalid gallery index: {gallery_index}"
+            )
+
+        if blueprint.get("image_selection_role") != expected_role:
+            raise ValueError(
+                f"Brand asset role must be {expected_role} in this position"
+            )
+
+        reason = blueprint.get("image_selection_reason")
+        if not isinstance(reason, str) or not reason.strip():
+            raise ValueError(
+                "Every brand asset must explain its image selection"
             )
 
         chosen_indexes.append(gallery_index)
@@ -133,6 +194,7 @@ def _validate_blueprints(blueprints, gallery):
             "One AI creative must be generated_visual"
         )
 
+    _validate_poster_language(blueprints, preferred_language, business_name)
     return blueprints
 
 
@@ -184,7 +246,7 @@ def generate_creative_blueprints(
 
     context = {
         "business": {
-            "name": brand.business_name or "",
+            "name": get_brand_display_name(brand),
             "description": brand.description or "",
             "category": brand.business_category or "",
             "target_audience": brand.target_audience or "",
@@ -296,6 +358,20 @@ Vary meaningfully between them:
 For the 3 Brand Asset designs:
 Do not merely place text on three different photos.
 Each photo must inspire a different composition.
+Assign image selection roles in this exact order:
+1. message_fit: image with the strongest direct semantic fit to the campaign
+   objective, brief and selected marketing text.
+2. visual_impact: a DIFFERENT image whose described subject and likely
+   composition offer the strongest visual focal point and striking crop.
+3. complementary_relevance: a THIRD image that brings a fresh, complementary
+   perspective while remaining genuinely relevant to the campaign.
+Base all judgments ONLY on the supplied gallery descriptions and context;
+never claim you saw an image or invent visual features absent from its description.
+If an image description lacks detail, acknowledge that in your reasoning.
+Each brand asset must include image_selection_role (the exact role above)
+and image_selection_reason (one concise explanation grounded in its description,
+the campaign and why it fulfills this distinct role).
+Keep all three gallery_index values distinct. Do not choose randomly.
 
 For the 2 AI Creative designs:
 They must not look like variations of each other.
@@ -390,10 +466,51 @@ cta:
 Do not overload the poster with text.
 
 ==================================================
+LANGUAGE RULE
+==================================================
+
+The business preferred language is:
+{brand.preferred_language or "עברית"}
+
+This language is mandatory for all customer-facing poster copy.
+
+Therefore:
+- headline MUST be written in the preferred language.
+- subheadline MUST be written in the preferred language.
+- CTA MUST be written in the preferred language.
+- Do NOT switch to another language because the campaign brief,
+  selected text, gallery descriptions or previous outputs use another language.
+- Hebrew and Arabic must use natural RTL phrasing.
+- English must use natural English phrasing.
+- Do NOT mix languages in the same poster unless the supplied business name
+  or official brand asset itself contains another language.
+
+==================================================
 DESIGN THINKING
 ==================================================
 
-For EVERY design:
+For EVERY design, renderer_strategy must describe HOW the renderer
+should visually execute the concept.
+
+Do not choose renderer_strategy values randomly.
+
+The strategy must be derived from:
+- campaign objective
+- business personality
+- target audience
+- selected image when applicable
+- copy length
+- graphic_direction or visual_generation
+- brand colors and typography
+
+The 5 designs must not all use the same renderer_strategy.
+
+The three brand_asset designs should use meaningfully different
+renderer strategies even when they belong to the same campaign.
+
+The pure_graphic and generated_visual designs must use clearly
+different renderer strategies from each other.
+
 - choose a distinct art direction.
 - choose composition based on the image/content,
   not from one fixed template.
@@ -406,6 +523,7 @@ For EVERY design:
 
 The five outputs should differ meaningfully in:
 - composition
+- renderer_strategy
 - visual hierarchy
 - image treatment
 - text placement
@@ -491,8 +609,69 @@ Each blueprint must contain:
 - subheadline
 - cta
 - composition
+- renderer_strategy
+
+Every blueprint (including both AI creatives) MUST include renderer_strategy.
+renderer_strategy must contain:
+- background_mode
+- typography_mode
+- focal_element
+- contrast_mode
+- density
+- shape_style
+- cta_style
+
+Allowed renderer_strategy values:
+
+background_mode:
+- brand_dark
+- brand_light
+- bold_gradient
+- editorial_neutral
+- image_dominant
+- image_soft
+
+typography_mode:
+- bold_compact
+- elegant_spacious
+- editorial
+- playful
+- minimal
+
+focal_element:
+- headline
+- image
+- graphic_element
+- cta
+
+contrast_mode:
+- high
+- medium
+- soft
+
+density:
+- minimal
+- balanced
+- expressive
+
+shape_style:
+- none
+- geometric
+- organic
+- linear
+- mixed
+
+cta_style:
+- pill
+- solid
+- outline
+- minimal_text
 
 For brand_asset designs:
+- image_selection_role must be one of: message_fit, visual_impact,
+  complementary_relevance, assigned in that order to designs 1, 2 and 3.
+- image_selection_reason must explain the image choice using only the
+  provided description, campaign objective, brief and selected text.
 - creative_type = "brand_asset"
 - creative_kind = "brand_photo"
 - gallery_index must reference one of the provided gallery images
@@ -541,6 +720,8 @@ Choose every design decision from the actual campaign, brand and selected image.
 
 The 3 brand_asset designs must:
 - use 3 different gallery images
+- follow the ordered image_selection_role assignments described above
+- provide a grounded, distinct image_selection_reason for each
 - use 3 meaningfully different composition strategies
 - not simply place different photos into the same structure
 
@@ -561,7 +742,15 @@ Return valid JSON only.
                     "You are a senior advertising Creative Director. "
                     "You create bold, clean, premium and strategically "
                     "different campaign concepts. "
-                    "You never invent business facts."
+                    "You never invent business facts. "
+                    "Write poster headlines, subheadlines and CTAs as original, "
+                    "natural copy in the business preferred language. "
+                    "Never translate literally from the campaign brief or selected text. "
+                    "For Arabic, use fluent, clear, contemporary Arabic that sounds "
+                    "natural to native speakers, not stiff literary language or "
+                    "Hebrew-influenced phrasing. "
+                    "Preserve the selected text's meaning and the official business name. "
+                    "Do not invent offers, prices or product details."
                 )
             },
             {
@@ -593,7 +782,9 @@ Return valid JSON only.
 
     blueprints = _validate_blueprints(
         blueprints,
-        gallery
+        gallery,
+        preferred_language=brand.preferred_language,
+        business_name=get_brand_display_name(brand)
     )
 
     # מחזירים גם את path האמיתי שנבחר

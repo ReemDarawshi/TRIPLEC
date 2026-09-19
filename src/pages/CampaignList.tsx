@@ -5,10 +5,11 @@ import './CampaignList.css';
 interface Campaign {
   id: number;
   title: string;
-  channel: string;
+  channel: string | null;
   date?: string;
   time?: string;
-  status: 'נשלח' | 'מתוזמן' | 'נכשל';
+  status: 'טיוטה' | 'נשלח' | 'מתוזמן' | 'נכשל' | 'לא ידוע';
+  status_code: 'draft' | 'scheduled' | 'sent' | string;
   sender: string;
 }
 
@@ -31,6 +32,11 @@ const CampaignList: React.FC = () => {
             Authorization: `Bearer ${token}`
           }
         });
+
+        if (!res.ok) {
+          console.error('שגיאה בשליפת קמפיינים:', res.status);
+          return;
+        }
 
         const data = await res.json();
         if (!Array.isArray(data)) {
@@ -86,13 +92,15 @@ const CampaignList: React.FC = () => {
           {filteredCampaigns.map((c) => (
             <tr key={c.id}>
               <td>{c.title}</td>
-              <td>{c.channel}</td>
+              <td>{c.channel || '—'}</td>
               <td>
                 <span className={`status-badge ${
                   c.status === 'נשלח'
                     ? 'sent'
                     : c.status === 'מתוזמן'
                     ? 'scheduled'
+                    : c.status === 'טיוטה'
+                    ? 'draft'
                     : 'failed'
                 }`}>
                   {c.status}
@@ -100,7 +108,13 @@ const CampaignList: React.FC = () => {
               </td>
               <td>{c.sender}</td>
               <td className="actions">
-                <button className="view-btn" onClick={() => handleView(c.id)}>צפייה</button>
+                {c.status_code === 'draft' ? (
+                  <button className="view-btn" onClick={() => navigate(`/campaign/edit/${c.id}`)}>
+                    המשך עריכה
+                  </button>
+                ) : (
+                  <button className="view-btn" onClick={() => handleView(c.id)}>צפייה</button>
+                )}
                 <button className="delete-btn" onClick={() => handleDelete(c.id)}>מחיקה</button>
               </td>
             </tr>

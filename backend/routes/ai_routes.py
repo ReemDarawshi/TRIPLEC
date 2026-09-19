@@ -16,6 +16,8 @@ from backend.helpers.creative_director import generate_creative_blueprints
 from backend.helpers.html_poster_renderer import render_blueprint_poster
 
 
+from backend.helpers.brand_display_name import get_brand_display_name
+
 client = OpenAI(api_key=config.Config.OPENAI_API_KEY)
 
 ai_bp = Blueprint('ai_bp', __name__, url_prefix="/api")
@@ -99,7 +101,7 @@ def generate_prompt_suggestions():
     roles_text = ", ".join(target_roles) if target_roles else "לא נבחרו תפקידים"
     groups_text = ", ".join(group_names) if group_names else "לא נבחרו קבוצות"
 
-    business_name = brand.business_name or "העסק"
+    business_name = get_brand_display_name(brand) or "העסק"
     business_category = brand.business_category or "לא הוגדר"
     business_description = brand.description or "לא הוגדר"
     location = brand.location or "לא הוגדר"
@@ -165,6 +167,21 @@ Tone of Voice:
 
 שפה מועדפת:
 {preferred_language}
+כל 3 ההצעות חייבות להיכתב בשפה המועדפת הזו בלבד.
+
+אם השפה המועדפת היא ערבית:
+- כתוב את כל ההצעות בערבית טבעית.
+- אל תתרגם לעברית.
+- אל תערבב עברית וערבית.
+
+אם השפה המועדפת היא עברית:
+- כתוב בעברית טבעית בלבד.
+
+אם השפה המועדפת היא אנגלית:
+- כתוב באנגלית טבעית בלבד.
+
+השפה של ההוראות בפרומפט אינה קובעת את שפת התוצאה.
+רק "השפה המועדפת" של העסק קובעת.
 
 CTA מועדף:
 {preferred_cta}
@@ -360,72 +377,253 @@ def generate_ai_texts():
             "error": "Failed to generate campaign texts"
         }), 500
 
-# GPT Generator – מקבל רק Prompt מהמשתמש + שואב את כל שאר המידע מתוך BrandSettings
 def generate_campaign_text(prompt, brand, campaign):
-    business_name = brand.business_name or "העסק שלך"
+    business_name = get_brand_display_name(brand) or "העסק"
     business_description = brand.description or ""
     location = brand.location or ""
-    primary_color = brand.primary_color or ""
-    font_title = brand.font_title or ""
+
+    business_category = brand.business_category or ""
+    target_audience = brand.target_audience or ""
+    tone_of_voice = brand.tone_of_voice or ""
+    unique_value_proposition = (
+        brand.unique_value_proposition or ""
+    )
+    main_products_services = (
+        brand.main_products_services or ""
+    )
+    preferred_language = (
+        brand.preferred_language or "עברית"
+    )
+    preferred_cta = brand.preferred_cta or ""
+    preferred_phrases = brand.preferred_phrases or ""
+    avoid_phrases = brand.avoid_phrases or ""
 
     campaign_type = campaign.type or "קמפיין"
-    audience_roles = json.loads(campaign.target_roles or "[]")
-    audience_groups = json.loads(campaign.target_groups or "[]")
 
-    # בניית תיאור קהל יעד
-    audience_desc = ""
-    if audience_roles:
-        audience_desc += " לפי תפקידים: " + ", ".join(audience_roles)
-    if audience_groups:
-        audience_desc += " לפי קבוצות: " + ", ".join(str(g) for g in audience_groups)
-
-    # יצירת הפרומפט
-    full_prompt = (
-        f"אתה כותב טקסטים שיווקיים עבור קמפיינים לעסקים קטנים בישראל. "
-        f"העסק נקרא: {business_name}. "
-        f"התיאור שלו: {business_description}. "
-        f"מיקום: {location if location else 'לא צויין'}. "
-        f"צבע ראשי למיתוג: {primary_color}. "
-        f"שם קמפיין: {campaign.name}. "
-        f"סוג קמפיין: {campaign_type}. "
-        f"קהל יעד: {audience_desc if audience_desc else 'לקוחות כלליים'}. "
-        f"הנה רעיון הקמפיין שהוזן ע״י המשתמש: {prompt} "
-        f"בהתאם לכך צור 3 טקסטים קצרים, משכנעים, קלילים, רלוונטיים לשליחה באימייל או וואטסאפ. "
-        f"כל טקסט צריך להיות בפסקה אחת לא יותר מדי רשמי, אבל עדיין מייצג את העסק. "
-        f"תוכל לשלב שם העסק בצורה יצירתית אם זה מתאים."
+    audience_roles = parse_campaign_json(
+        campaign.target_roles
     )
 
+    audience_groups = parse_campaign_json(
+        campaign.target_groups
+    )
+
+    audience_desc_parts = []
+
+    if audience_roles:
+        audience_desc_parts.append(
+            "Roles: " + ", ".join(
+                str(role)
+                for role in audience_roles
+            )
+        )
+
+    if audience_groups:
+        audience_desc_parts.append(
+            "Groups: " + ", ".join(
+                str(group)
+                for group in audience_groups
+            )
+        )
+
+    audience_desc = (
+        " | ".join(audience_desc_parts)
+        if audience_desc_parts
+        else "General customers"
+    )
+
+    full_prompt = f"""
+    
+You are writing marketing copy for a campaign
+inside the TRIPLE marketing platform.
+
+==================================================
+MANDATORY OUTPUT LANGUAGE
+==================================================
+
+Preferred language:
+{preferred_language}
+
+This is mandatory.
+
+All 3 marketing texts MUST be written entirely
+in the preferred language.
+
+Important:
+- Do not choose the language based on the language
+  used in these instructions.
+- Do not choose the language based on the campaign brief.
+- Do not switch languages because previous content
+  was written in another language.
+- Do not mix languages unless the official business name
+  itself contains another language.
+- Hebrew and Arabic must sound natural and native,
+  not like literal translations.
+
+==================================================
+BUSINESS
+==================================================
+
+Business name:
+{business_name}
+
+Business description:
+{business_description}
+
+Business category:
+{business_category}
+
+Location:
+{location}
+
+General target audience:
+{target_audience}
+
+Tone of voice:
+{tone_of_voice}
+
+Main products/services:
+{main_products_services}
+
+Unique value proposition:
+{unique_value_proposition}
+
+Preferred CTA:
+{preferred_cta}
+
+Preferred words/phrases:
+{preferred_phrases}
+
+Words/phrases to avoid:
+{avoid_phrases}
+
+==================================================
+CAMPAIGN
+==================================================
+
+Campaign name:
+{campaign.name or ""}
+
+Campaign objective:
+{campaign_type}
+
+Actual campaign audience:
+{audience_desc}
+
+Approved campaign brief:
+{prompt}
+
+==================================================
+TASK
+==================================================
+
+Create exactly 3 different short marketing texts.
+
+Each text must:
+- be suitable for Email or WhatsApp
+- be concise and persuasive
+- sound natural for this specific business
+- follow the brand tone
+- relate directly to the campaign brief
+- use the preferred CTA when appropriate
+- avoid forbidden phrases
+- not invent prices, discounts, products,
+  locations, events or business facts
+- not be a variation of the same sentence
+
+Return JSON only in this exact structure:
+
+{{
+  "texts": [
+    "text 1",
+    "text 2",
+    "text 3"
+  ]
+}}
+"""
+
     try:
-        print(" Full prompt sent to OpenAI:\n", full_prompt)
+        print(
+            "Preferred AI language:",
+            preferred_language
+        )
 
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "אתה יועץ שיווק בעברית. תכתוב טקסטים קצרים לקמפיינים בצורה מעניינת ויצירתית."},
-                {"role": "user", "content": full_prompt}
+                {
+                    "role": "system",
+                    "content": (
+                        "You are an expert native multilingual advertising copywriter. "
+                        "Write original marketing copy, never literal translations. "
+                        "Always obey the business preferred language. "
+                        "Preserve the official business name exactly. "
+                        "Never invent business facts. "
+                        + (
+                            "For Arabic, write fluent, natural, contemporary Arabic "
+                            "suitable for real marketing communication. "
+                            "Use clear, approachable Modern Standard Arabic, "
+                            "not stiff literary language or translated Hebrew phrasing. "
+                            "Use natural Arabic sentence structures and idiomatic expressions. "
+                            "Avoid generic advertising clichés, exaggerated promises, "
+                            "awkward wording and unnecessary foreign terms. "
+                            "Keep sentences short, appealing and culturally appropriate. "
+                            "Write as a native Arabic copywriter would for this business. "
+                            if str(preferred_language).strip().lower()
+                            in ("ערבית", "arabic", "ar")
+                            else ""
+                        )
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": full_prompt
+                }
             ],
-            temperature=0.75,
-            max_tokens=500
+            temperature=0.8,
+            max_tokens=700,
+            response_format={
+                "type": "json_object"
+            }
         )
 
-        result = response.choices[0].message.content.strip()
-        texts = [line.strip("-•123. ").strip() for line in result.split("\n") if line.strip()]
-        texts = [t for t in texts if len(t) > 10]
+        raw_result = (
+            response
+            .choices[0]
+            .message
+            .content
+            .strip()
+        )
 
-        return {"texts": texts[:3]}
+        result = json.loads(raw_result)
 
-    except Exception as e:
-        print(" OpenAI Error:", e)
-        import traceback
-        traceback.print_exc()
+        texts = result.get("texts", [])
+
+        if not isinstance(texts, list):
+            raise ValueError(
+                "AI texts response is not a list"
+            )
+
+        texts = [
+            text.strip()
+            for text in texts
+            if isinstance(text, str)
+            and text.strip()
+        ]
+
+        if len(texts) != 3:
+            raise ValueError(
+                "AI must return exactly 3 texts"
+            )
 
         return {
-            "texts": [
-                "⚠️ הייתה שגיאה ביצירת הטקסט. נסי שוב מאוחר יותר.",
-                "🚧 אנחנו עובדים על שיפור המערכת.",
-                "💡 ניתן להזין טקסט ידנית בינתיים."
-            ]
+            "texts": texts
         }
+
+    except Exception as e:
+        print("OpenAI text generation error:", e)
+        traceback.print_exc()
+        raise
 
 @ai_bp.route('/generate_posters', methods=['POST'])
 @jwt_required()
@@ -459,6 +657,16 @@ def generate_posters_from_gallery_route():
         if not brand:
             return jsonify({"error": "Brand settings not found"}), 404
 
+        # Only explicit user action can generate; reject empty text before any AI call.
+        if current_user.role not in ("admin", "marketing"):
+            return jsonify({"error": "Insufficient permissions"}), 403
+        if campaign.status != "draft":
+            return jsonify({"error": "Only draft campaigns can generate posters"}), 409
+        if not selected_text:
+            return jsonify({"error": "A selected text is required"}), 400
+        if len(selected_text) > 10000:
+            return jsonify({"error": "Selected text is too long"}), 400
+
         result = generate_creative_blueprints(
             client=client,
             brand=brand,
@@ -487,11 +695,31 @@ def generate_posters_from_gallery_route():
                 "blueprint": blueprint
             })
 
+        # Save only after all five files are successfully rendered. Previous
+        # generation remains available if AI/rendering fails before this point.
+        if len(posters) != 5:
+            raise ValueError("Expected exactly five rendered posters")
+        campaign.poster_options = {
+            "selected_text": selected_text,
+            "posters": [
+                {
+                    "id": item["id"],
+                    "title": item["title"],
+                    "description": item["description"],
+                    "imageSrc": item["imageSrc"],
+                    "creative_type": item["creative_type"],
+                    "creative_kind": item["creative_kind"],
+                }
+                for item in posters
+            ],
+        }
+        db.session.commit()
         return jsonify({
             "posters": posters
         }), 200
 
     except ValueError as e:
+        db.session.rollback()
         print("Creative Director validation error:", e)
 
         return jsonify({
@@ -499,6 +727,7 @@ def generate_posters_from_gallery_route():
         }), 400
 
     except Exception as e:
+        db.session.rollback()
         print("Creative Director error:", e)
         traceback.print_exc()
 

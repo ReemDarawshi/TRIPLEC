@@ -65,6 +65,7 @@ const App: React.FC = () => {
 
           {/* שלבי קמפיין */}
           <Route path="/campaign" element={<Campaign />} />
+          <Route path="/campaign/edit/:id" element={<Campaign />} />
           <Route path="/campaign/ai/:id" element={<AIPrompt />} />
           <Route path="/ai" element={<AIPrompt />} />
           <Route path="/design/:id" element={<DesignSelector />} />

@@ -43,6 +43,7 @@ const DesignSelector: React.FC = () => {
   const [selectedDesignId, setSelectedDesignId] = useState<string | null>(null);
   const [designs, setDesigns] = useState<UiDesign[]>([]);
   const [selectedPrompt, setSelectedPrompt] = useState<string>("");
+  const [generatingPosters, setGeneratingPosters] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
   const CAMPAIGN_ID = id;
@@ -96,6 +97,26 @@ useEffect(() => {
         setSelectedPrompt("");
       }
 
+      // Restore the last completed generation; never call the AI on page load.
+      const savedBatch = data.poster_options;
+      const savedPosters = savedBatch && Array.isArray(savedBatch.posters)
+        ? savedBatch.posters.filter((poster: UiDesign) =>
+            typeof poster.id === "string" && typeof poster.imageSrc === "string")
+        : [];
+      setDesigns(savedPosters);
+      setSelectedDesignId(
+        savedPosters.some((poster: UiDesign) => poster.id === data.design_id)
+          ? data.design_id
+          : null
+      );
+      const savedText = typeof savedBatch?.selected_text === "string"
+        ? savedBatch.selected_text : data.message_text;
+      if (savedText && Array.isArray(data.ai_text_options)) {
+        const matchIndex = data.ai_text_options.findIndex((text: string) =>
+          text.trim() === savedText.trim());
+        if (matchIndex >= 0) setSelectedIndex(matchIndex);
+      }
+
     } catch (e) {
       console.error("שגיאה בשליפת נתוני הקמפיין:", e);
     }
@@ -104,48 +125,49 @@ useEffect(() => {
   fetchCampaignData();
 }, [CAMPAIGN_ID]);
 
-  // שלב 2: שליפת פוסטרים מהשרת
-  useEffect(() => {
-    const fetchPosters = async () => {
-      if (!CAMPAIGN_ID || !selectedPrompt || selectedPrompt.trim() === "") return;
-
-      try {
-        const token = localStorage.getItem("token");
-        const res = await fetch("http://localhost:5000/api/generate_posters", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            campaign_id: CAMPAIGN_ID,
-            prompt: selectedPrompt,
-          }),
-        });
-
-        if (!res.ok) {
-          const errText = await res.text();
-          console.error("שגיאה בשליפת פוסטרים:", errText);
-          alert("⚠️ לא ניתן לטעון פוסטרים מהגלריה.");
-          return;
-        }
-
-        const data = await res.json();
-        if (Array.isArray(data.posters)) {
-          setDesigns(data.posters);
-          designs.map(d => console.log("✔️ poster src:", d.imageSrc));
-        } else {
-          setDesigns([]);
-        }
-      } catch (e) {
-        console.error("שגיאה בשליפת פוסטרים:", e);
-      }
-    };
-    
-    if (selectedPrompt && selectedPrompt.trim() !== "") {
-      fetchPosters();
+  // Generate only on an explicit click, using the approved, edited text.
+  const fetchPosters = async () => {
+    if (generatingPosters || !CAMPAIGN_ID) return;
+    if (selectedIndex === null || !editedTexts[selectedIndex]?.trim()) {
+      alert("יש לבחור טקסט לפני יצירת העיצובים");
+      return;
     }
-  }, [CAMPAIGN_ID, selectedPrompt]);
+
+    setGeneratingPosters(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("http://localhost:5000/api/generate_posters", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          campaign_id: CAMPAIGN_ID,
+          selected_text: editedTexts[selectedIndex].trim(),
+        }),
+      });
+
+      if (!res.ok) {
+        console.error("שגיאה ביצירת פוסטרים:", await res.text());
+        alert("לא ניתן ליצור עיצובים. בדקי את הודעת השגיאה.");
+        return;
+      }
+
+      const data = await res.json();
+      if (!Array.isArray(data.posters)) {
+        alert("השרת לא החזיר רשימת עיצובים תקינה");
+        return;
+      }
+      setDesigns(data.posters);
+      setSelectedDesignId(null);
+    } catch (e) {
+      console.error("שגיאה ביצירת פוסטרים:", e);
+      alert("שגיאה ביצירת העיצובים");
+    } finally {
+      setGeneratingPosters(false);
+    }
+  };
 
   // שלב 3: שמירת הבחירה
   const handleSelect = async () => {
@@ -159,7 +181,7 @@ useEffect(() => {
 
     try {
       const token = localStorage.getItem("token");
-      await fetch(`http://localhost:5000/api/campaigns/${CAMPAIGN_ID}/design`, {
+      const res = await fetch(`http://localhost:5000/api/campaigns/${CAMPAIGN_ID}/design`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -172,6 +194,11 @@ useEffect(() => {
         }),
       });
 
+      if (!res.ok) {
+        console.error("שמירת העיצוב נכשלה:", await res.text());
+        alert("השמירה נכשלה. לא עוברים לשלב הבא.");
+        return;
+      }
       navigate(`/delivery/${CAMPAIGN_ID}`);
     } catch (err) {
       console.error("שגיאה בשמירת הבחירה לשרת", err);
@@ -189,14 +216,14 @@ return (
           <div
             key={idx}
             className={`text-card ${selectedIndex === idx ? "selected" : ""}`}
-            onClick={() => setSelectedIndex(idx)}
+            onClick={() => { setSelectedIndex(idx); setSelectedDesignId(null); setDesigns([]); }}
           >
             <div className="text-card-header">
               <input
                 type="radio"
                 name="selectedText"
                 checked={selectedIndex === idx}
-                onChange={() => setSelectedIndex(idx)}
+                onChange={() => { setSelectedIndex(idx); setSelectedDesignId(null); setDesigns([]); }}
               />
             </div>
             <textarea
@@ -206,6 +233,8 @@ return (
                 const next = [...editedTexts];
                 next[idx] = e.target.value;
                 setEditedTexts(next);
+                setSelectedDesignId(null);
+                setDesigns([]);
               }}
               rows={3}
             />
@@ -215,6 +244,17 @@ return (
     ) : (
       <p className="empty-message">אין טקסטים להצגה – ודאי שה-AI חזר עם תוצאות תקינות.</p>
     )}
+
+    <div className="bottom-actions">
+      <button
+        type="button"
+        className="next-button"
+        disabled={generatingPosters || selectedIndex === null || !editedTexts[selectedIndex]?.trim()}
+        onClick={fetchPosters}
+      >
+        {generatingPosters ? "יוצר עיצובים..." : designs.length ? "צור 5 עיצובים חדשים" : "צור 5 עיצובים"}
+      </button>
+    </div>
 
     {designs.length > 0 && (
       <>

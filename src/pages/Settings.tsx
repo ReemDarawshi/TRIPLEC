@@ -40,6 +40,9 @@ const Settings = () => {
 
   // משתנים קיימים
   const [businessName, setBusinessName] = useState('');
+  const [businessNameLocalized, setBusinessNameLocalized] = useState('');
+  const [languageDialog, setLanguageDialog] = useState<'ערבית' | 'אנגלית' | null>(null);
+  const [languageNameDraft, setLanguageNameDraft] = useState('');
   const [description, setDescription] = useState('');
   const [mainImage, setMainImage] = useState<File | null>(null);
   const [logos, setLogos] = useState<File[]>([]);
@@ -123,6 +126,7 @@ const handleDeleteExistingGalleryImage = async (index: number) => {
         const data = await response.json();
 
         setBusinessName(data.businessName || '');
+        setBusinessNameLocalized(data.businessNameLocalized || '');
         setDescription(data.description || '');
         setPrimaryColor(data.primaryColor || '#0d47a1');
         setPalette(data.palette || []);
@@ -243,7 +247,20 @@ const handleDeleteMainImage = async () => {
   const token = localStorage.getItem('token');
 
   // מוסיפים קודם את כל השדות ל־FormData
-  formData.append('businessName', businessName);
+  if (!businessName.trim() || businessName.trim().length > 120) {
+    alert('יש להזין שם עסק תקין (עד 120 תווים).');
+    return;
+  }
+  if (!preferredLanguage) {
+    alert('יש לבחור שפה מועדפת.');
+    return;
+  }
+  if (preferredLanguage !== 'עברית' && (!businessNameLocalized.trim() || businessNameLocalized.trim().length > 120)) {
+    alert('יש להזין שם עסק בשפה שנבחרה (עד 120 תווים).');
+    return;
+  }
+  formData.append('businessName', businessName.trim());
+  formData.append('businessNameLocalized', preferredLanguage === 'עברית' ? '' : businessNameLocalized.trim());
   formData.append('description', description);
   formData.append('primaryColor', primaryColor);
   formData.append('palette', palette.join(','));
@@ -416,14 +433,24 @@ return (
      שפה מועדפת:
       <select
         value={preferredLanguage}
-        onChange={(e) => setPreferredLanguage(e.target.value)}
+        onChange={(e) => {
+          const nextLanguage = e.target.value;
+          if (nextLanguage === preferredLanguage) return;
+          if (nextLanguage === 'ערבית' || nextLanguage === 'אנגלית') {
+            // Do not keep a name typed for a different language.
+            setLanguageNameDraft('');
+            setLanguageDialog(nextLanguage);
+          } else {
+            setPreferredLanguage(nextLanguage);
+            setBusinessNameLocalized('');
+            setLanguageDialog(null);
+          }
+        }}
       >
         <option value="">בחרי שפה</option>
         <option value="עברית">עברית</option>
         <option value="ערבית">ערבית</option>
         <option value="אנגלית">אנגלית</option>
-        <option value="עברית וערבית">עברית וערבית</option>
-        <option value="רב-לשוני">רב-לשוני</option>
       </select>
     </label>
 
@@ -638,6 +665,31 @@ return (
         </button>
       </div>
     </form>
+    {languageDialog && (
+      <div role="presentation" style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div role="dialog" aria-modal="true" aria-labelledby="localized-name-title" dir="rtl" style={{ width: '100%', maxWidth: 420, background: 'white', borderRadius: 14, padding: 24 }}>
+          <h3 id="localized-name-title">שם העסק בשפה שנבחרה: {languageDialog}</h3>
+          <p>השם המקורי יישמר. הזיני את השם הרשמי שבו תרצי להשתמש בקמפיינים.</p>
+          <input
+            type="text"
+            value={languageNameDraft}
+            maxLength={120}
+            dir={languageDialog === 'אנגלית' ? 'ltr' : 'rtl'}
+            aria-label={`שם העסק ב${languageDialog}`}
+            onChange={(e) => setLanguageNameDraft(e.target.value)}
+            style={{ width: '100%', padding: 10, marginBottom: 16 }}
+          />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" disabled={!languageNameDraft.trim()} onClick={() => {
+              setPreferredLanguage(languageDialog);
+              setBusinessNameLocalized(languageNameDraft.trim());
+              setLanguageDialog(null);
+            }}>אישור</button>
+            <button type="button" onClick={() => setLanguageDialog(null)}>ביטול</button>
+          </div>
+        </div>
+      </div>
+    )}
   </div>
   );
 };

@@ -9,15 +9,34 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from backend.models.models import db, Campaign, User, Contact, ContactGroup, BrandSettings, Group
-from backend.models.models import db, Campaign, Contact, ContactGroup, BrandSettings
 from backend.utils.ai_generator import generate_campaign_text
 from sqlalchemy.exc import SQLAlchemyError
+from werkzeug.exceptions import HTTPException
 from datetime import datetime
 import json
 import os
 import openai
 
 campaign_bp = Blueprint('campaigns', __name__, url_prefix='/api/campaigns')
+
+
+def _authenticated_campaign_user():
+    """Derive tenant from the JWT identity, never from request data."""
+    user = User.query.get(get_jwt_identity())
+    if user is None:
+        from flask import abort
+        abort(403)
+    return user
+
+
+def _owned_campaign_or_404(campaign_id):
+    """Treat campaigns owned by other businesses as not found."""
+    user = _authenticated_campaign_user()
+    return Campaign.query.filter_by(
+        campaign_id=campaign_id,
+        business_id=user.business_id,
+    ).first_or_404()
+
 
 # יצירת קמפיין חדש
 @campaign_bp.route('', methods=['POST'])
@@ -102,7 +121,9 @@ def create_campaign():
 @campaign_bp.route('', methods=['GET'])
 @jwt_required()
 def get_all_campaigns():
-    campaigns = Campaign.query.all()
+    campaigns = Campaign.query.filter_by(
+        business_id=_authenticated_campaign_user().business_id
+    ).all()
     return jsonify([
         {
             'campaign_id': c.campaign_id,
@@ -125,12 +146,82 @@ def get_all_campaigns():
     ])
 
 
+# עדכון פרטי טיוטה בלבד: אינו מפעיל AI או שליחה.
+@campaign_bp.route('/<int:campaign_id>/draft-details', methods=['PUT'])
+@jwt_required()
+def update_campaign_draft_details(campaign_id):
+    user = _authenticated_campaign_user()
+    if user.role not in ('admin', 'marketing'):
+        return jsonify({'error': 'Insufficient permissions'}), 403
+
+    campaign = _owned_campaign_or_404(campaign_id)
+    if campaign.status != 'draft':
+        return jsonify({'error': 'Only draft campaigns can be edited'}), 409
+
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({'error': 'Invalid JSON object'}), 400
+
+    name = data.get('name')
+    campaign_type = data.get('type')
+    sender_id = data.get('sender_id')
+    target_groups = data.get('target_groups')
+    target_roles = data.get('target_roles')
+
+    if not isinstance(name, str) or not name.strip() or len(name.strip()) > 200:
+        return jsonify({'error': 'Invalid campaign name'}), 400
+    if not isinstance(campaign_type, str) or not campaign_type.strip() or len(campaign_type.strip()) > 50:
+        return jsonify({'error': 'Invalid campaign type'}), 400
+    if not isinstance(target_groups, list) or not isinstance(target_roles, list):
+        return jsonify({'error': 'Target groups and roles must be lists'}), 400
+    if not target_groups and not target_roles:
+        return jsonify({'error': 'At least one audience is required'}), 400
+    if any(type(group_id) is not int for group_id in target_groups):
+        return jsonify({'error': 'Invalid group identifiers'}), 400
+    if any(not isinstance(role, str) or role not in ('לקוחות', 'ספקים', 'סוכנים') for role in target_roles):
+        return jsonify({'error': 'Invalid target roles'}), 400
+
+    try:
+        sender_id = int(sender_id)
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Invalid sender'}), 400
+
+    sender = User.query.filter(
+        User.id == sender_id,
+        User.business_id == user.business_id,
+        User.role.in_(['admin', 'marketing'])
+    ).first()
+    if sender is None:
+        return jsonify({'error': 'Invalid sender'}), 400
+
+    valid_group_ids = {
+        item.id for item in Group.query.filter(
+            Group.id.in_(target_groups),
+            Group.business_id == user.business_id
+        ).all()
+    } if target_groups else set()
+    if valid_group_ids != set(target_groups):
+        return jsonify({'error': 'Invalid target groups'}), 400
+
+    try:
+        campaign.name = name.strip()
+        campaign.type = campaign_type.strip()
+        campaign.sender_id = sender.id
+        campaign.target_groups = json.dumps(target_groups)
+        campaign.target_roles = json.dumps(target_roles)
+        db.session.commit()
+        return jsonify({'message': 'Draft details saved', 'id': campaign.campaign_id}), 200
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to save draft'}), 500
+
+
 # עדכון קמפיין קיים
 @campaign_bp.route('/<int:campaign_id>', methods=['PUT'])
 @jwt_required()
 def update_campaign(campaign_id):
     data = request.get_json()
-    campaign = Campaign.query.get(campaign_id)
+    campaign = _owned_campaign_or_404(campaign_id)
 
     if not campaign:
         return jsonify({'error': 'Campaign not found'}), 404
@@ -146,7 +237,7 @@ def update_campaign(campaign_id):
         campaign.selected_template = data.get('selected_template', campaign.selected_template)
         campaign.ai_prompt = data.get('ai_prompt', campaign.ai_prompt)
         campaign.ai_template_id = data.get('ai_template_id', campaign.ai_template_id)
-        campaign.design_id = data.get('design_id', campaign.design_id)
+        # Design changes must go through the dedicated, validated design route.
         campaign.message_text = data.get('message_text', campaign.message_text)
         campaign.channel = data.get('channel', campaign.channel)
 
@@ -166,7 +257,7 @@ def update_campaign(campaign_id):
 @jwt_required()
 def delete_campaign(campaign_id):
     try:
-        campaign = Campaign.query.get(campaign_id)
+        campaign = _owned_campaign_or_404(campaign_id)
         if not campaign:
             return jsonify({'error': 'Campaign not found'}), 404
 
@@ -187,11 +278,12 @@ def send_campaign():
     campaign_id = data.get('campaign_id')
 
     try:
-        campaign = Campaign.query.get_or_404(campaign_id)
+        campaign = _owned_campaign_or_404(campaign_id)
         channel = campaign.channel or data.get('channel', 'email')
         message_text = campaign.message_text or data.get('message_text', '')
-        image_path = data.get('image_path', campaign.image_path)
-        campaign.image_path = image_path
+        # Image selection is persisted at the design step. A send request
+        # must not overwrite it with a caller-supplied path.
+        image_path = campaign.image_path
 
         target_roles = json.loads(campaign.target_roles or "[]")
         target_groups = json.loads(campaign.target_groups or "[]")
@@ -203,7 +295,10 @@ def send_campaign():
         ).all()
 
         group_contact_ids = db.session.query(ContactGroup.contact_id).filter(
-            ContactGroup.group_id.in_(target_groups)
+            ContactGroup.group_id.in_(target_groups),
+            ContactGroup.group_id.in_(
+                db.session.query(Group.id).filter_by(business_id=business_id)
+            )
         ).subquery()
 
         group_contacts = Contact.query.filter(
@@ -262,6 +357,8 @@ def send_campaign():
         else:
             return jsonify({"error": "Unsupported channel"}), 400
 
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
@@ -273,7 +370,7 @@ def send_campaign():
 def update_campaign_ai(campaign_id):
     data = request.json
     try:
-        campaign = Campaign.query.get_or_404(campaign_id)
+        campaign = _owned_campaign_or_404(campaign_id)
         campaign.target_groups = json.dumps(data.get('target_groups', []))
         campaign.target_roles = json.dumps(data.get('roles', []))
         campaign.ai_prompt = data.get('ai_prompt')
@@ -288,24 +385,80 @@ def update_campaign_ai(campaign_id):
 @campaign_bp.route('/<int:campaign_id>/design', methods=['PUT'])
 @jwt_required()
 def update_campaign_design(campaign_id):
-    data = request.json
+    """Save the selected copy and, optionally, a poster created for this campaign."""
+    import re
+
+    user = _authenticated_campaign_user()
+    if user.role not in ('admin', 'marketing'):
+        return jsonify({'error': 'Insufficient permissions'}), 403
+
+    campaign = _owned_campaign_or_404(campaign_id)
+    if campaign.status != 'draft':
+        return jsonify({'error': 'Only drafts can be edited'}), 409
+
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({'error': 'Invalid JSON object'}), 400
+
+    message_text = data.get('message_text')
+    if not isinstance(message_text, str) or not message_text.strip():
+        return jsonify({'error': 'Campaign text is required'}), 400
+
+    design_id = data.get('selected_design_id')
+    image_path = data.get('image_path')
+    if image_path is None and design_id is None:
+        # Text-only campaigns are valid.
+        pass
+    elif not isinstance(image_path, str) or not isinstance(design_id, str):
+        return jsonify({'error': 'Design ID and image are required together'}), 400
+    else:
+        # html_poster_renderer.py emits:
+        # campaign_{campaign_id}_{design_id}_{uuid.uuid4().hex}.png
+        if not re.fullmatch(r'[A-Za-z0-9_-]{1,64}', design_id):
+            return jsonify({'error': 'Invalid design ID'}), 400
+        prefix = f'campaign_{campaign_id}_{design_id}_'
+        image_name_pattern = re.escape(prefix) + r'[0-9a-f]{32}\.png'
+        filename = image_path.rsplit('/', 1)[-1]
+        if (not re.fullmatch(image_name_pattern, filename)
+                or image_path != f'/static/uploads/poster_html/{filename}'):
+            return jsonify({'error': 'Invalid design image'}), 400
+
+        # For newly generated batches, verify that this exact poster was
+        # issued to this campaign. Keep legacy filename validation above for
+        # campaigns created before poster_options was introduced.
+        saved_batch = campaign.poster_options
+        if isinstance(saved_batch, dict) and saved_batch.get('posters'):
+            if not any(
+                isinstance(item, dict)
+                and item.get('id') == design_id
+                and item.get('imageSrc') == image_path
+                for item in saved_batch['posters']
+            ):
+                return jsonify({'error': 'Design does not belong to saved poster options'}), 400
+
+        # The renderer uses the project root's static/uploads/poster_html.
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        file_path = os.path.join(project_root, 'static', 'uploads', 'poster_html', filename)
+        if not os.path.isfile(file_path):
+            return jsonify({'error': 'Design file not found'}), 400
+
     try:
-        campaign = Campaign.query.get_or_404(campaign_id)
-        campaign.design_id = data.get('selected_design_id')
-        campaign.message_text = data.get('message_text')
-        campaign.image_path = data.get('image_path') 
+        campaign.design_id = design_id
+        campaign.message_text = message_text.strip()
+        campaign.image_path = image_path
         db.session.commit()
-        return jsonify({"message": "Design selection updated successfully"}), 200
-    except SQLAlchemyError as e:
+        return jsonify({'message': 'Design selection updated successfully'}), 200
+    except SQLAlchemyError:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return jsonify({'error': 'Could not save design selection'}), 500
+
 
 @campaign_bp.route('/<int:campaign_id>/delivery', methods=['PUT'])
 @jwt_required()
 def update_campaign_delivery(campaign_id):
     data = request.json
     try:
-        campaign = Campaign.query.get_or_404(campaign_id)
+        campaign = _owned_campaign_or_404(campaign_id)
         campaign.message_text = data.get('message_text')
         campaign.channel = data.get('channel')
         if 'scheduled_at' in data:
@@ -325,7 +478,7 @@ def update_campaign_delivery(campaign_id):
 def schedule_campaign(campaign_id):
     data = request.get_json()
     try:
-        campaign = Campaign.query.get_or_404(campaign_id)
+        campaign = _owned_campaign_or_404(campaign_id)
 
         if 'scheduled_at' in data:
             campaign.scheduled_at = datetime.strptime(data['scheduled_at'], "%Y-%m-%dT%H:%M:%S")
@@ -349,7 +502,9 @@ def schedule_campaign(campaign_id):
 @jwt_required()
 def get_campaigns_summary():
     try:
-        campaigns = Campaign.query.all()
+        campaigns = Campaign.query.filter_by(
+        business_id=_authenticated_campaign_user().business_id
+    ).all()
         result = []
 
         for c in campaigns:
@@ -360,6 +515,7 @@ def get_campaigns_summary():
                 'date': c.scheduled_at.strftime('%Y-%m-%d') if c.scheduled_at else '',
                 'time': c.scheduled_at.strftime('%H:%M') if c.scheduled_at else '',
                 'status': translate_status(c.status),
+                'status_code': c.status,
                 'sender': get_user_name(c.sender_id)
             })
 
@@ -373,7 +529,10 @@ def get_campaigns_summary():
 @jwt_required()
 def get_scheduled_campaigns():
     try:
-        campaigns = Campaign.query.filter_by(status='scheduled').all()
+        campaigns = Campaign.query.filter_by(
+            business_id=_authenticated_campaign_user().business_id,
+            status='scheduled'
+        ).all()
         result = []
 
         for c in campaigns:
@@ -413,13 +572,16 @@ def get_senders():
 
 # פונקציית עזר – החזרת שם שולח לפי מזהה
 def get_user_name(user_id):
-    user = User.query.get(user_id)
+    user = User.query.filter_by(
+        id=user_id, business_id=_authenticated_campaign_user().business_id
+    ).first()
     return user.full_name if user else 'לא ידוע'
 
 
 # תרגום סטטוס לעברית
 def translate_status(status):
     mapping = {
+        'draft': 'טיוטה',
         'sent': 'נשלח',
         'scheduled': 'מתוזמן',
         'failed': 'נכשל'
@@ -432,27 +594,52 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 @campaign_bp.route('/<int:campaign_id>', methods=['GET'])
 @jwt_required()
 def get_campaign_by_id(campaign_id):
-    campaign = Campaign.query.get(campaign_id)
+    campaign = _owned_campaign_or_404(campaign_id)
     if not campaign:
         return jsonify({'error': 'Campaign not found'}), 404
+
+    # Older campaigns may have JSON-encoded strings in these JSON columns.
+    # Return arrays consistently so the frontend can restore draft selections.
+    def normalize_list(value):
+        if isinstance(value, list):
+            return value
+        if isinstance(value, str):
+            try:
+                result = json.loads(value)
+                return result if isinstance(result, list) else []
+            except (json.JSONDecodeError, TypeError):
+                return []
+        return []
 
     return jsonify({
         'campaign_id': campaign.campaign_id,
         'name': campaign.name,
-        'message_text': campaign.message_text,
-        'image_path': campaign.image_path,
-        'status': campaign.status,
         'type': campaign.type,
-        'ai_text_options': campaign.ai_text_options,
+        'sender_id': campaign.sender_id,
+        'target_groups': normalize_list(campaign.target_groups),
+        'target_roles': normalize_list(campaign.target_roles),
+        'status': campaign.status,
         'ai_prompt': campaign.ai_prompt,
-        'created_at': campaign.created_at.isoformat() if campaign.created_at else None
+        'ai_text_options': campaign.ai_text_options,
+        'poster_options': campaign.poster_options,
+        'message_text': campaign.message_text,
+        'design_id': campaign.design_id,
+        'image_path': campaign.image_path,
+        'channel': campaign.channel,
+        'scheduled_at': (
+            campaign.scheduled_at.isoformat()
+            if campaign.scheduled_at else None
+        ),
+        'created_at': (
+            campaign.created_at.isoformat()
+            if campaign.created_at else None
+        )
     })
-
 
 @campaign_bp.route('/contacts/for_campaign/<int:campaign_id>', methods=['GET'])
 @jwt_required()
 def get_contact_phones_for_campaign(campaign_id):
-    campaign = Campaign.query.get_or_404(campaign_id)
+    campaign = _owned_campaign_or_404(campaign_id)
 
     target_roles = json.loads(campaign.target_roles or "[]")
     target_groups = json.loads(campaign.target_groups or "[]")
@@ -464,7 +651,10 @@ def get_contact_phones_for_campaign(campaign_id):
     ).all()
 
     group_contact_ids = db.session.query(ContactGroup.contact_id).filter(
-        ContactGroup.group_id.in_(target_groups)
+        ContactGroup.group_id.in_(target_groups),
+        ContactGroup.group_id.in_(
+            db.session.query(Group.id).filter_by(business_id=business_id)
+        )
     ).subquery()
 
     group_contacts = Contact.query.filter(
@@ -479,9 +669,15 @@ def get_contact_phones_for_campaign(campaign_id):
 @campaign_bp.route('/send_sms', methods=['POST'])
 @jwt_required()
 def send_sms_route():
-    data = request.json
+    data = request.get_json(silent=True) or {}
     phone = data.get('phone')
     message = data.get('message')
+    user = _authenticated_campaign_user()
+    # This standalone endpoint must not act as an arbitrary SMS relay.
+    if not isinstance(phone, str) or not phone.strip() or not isinstance(message, str) or not message.strip():
+        return jsonify({'error': 'Phone and message are required'}), 400
+    if not Contact.query.filter_by(business_id=user.business_id, phone=phone).first():
+        return jsonify({'error': 'Recipient not found'}), 404
 
     try:
         from backend.sms_sender import send_sms
@@ -499,7 +695,7 @@ def generate_ai_texts():
     if not campaign_id:
         return jsonify({"error": "Missing campaign_id"}), 400
 
-    campaign = Campaign.query.get(campaign_id)
+    campaign = _owned_campaign_or_404(campaign_id)
     if not campaign:
         return jsonify({"error": "Campaign not found"}), 404
 

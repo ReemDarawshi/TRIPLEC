@@ -43,7 +43,8 @@ def save_brand_settings():
     data = request.form
     files = request.files
 
-    business_name = data.get('businessName')
+    business_name = (data.get('businessName') or '').strip()
+    business_name_localized = (data.get('businessNameLocalized') or '').strip()
     description = data.get('description')
     primary_color = data.get('primaryColor')
     palette = data.get('palette')
@@ -62,6 +63,21 @@ def save_brand_settings():
     preferred_phrases = data.get('preferredPhrases')
     avoid_phrases = data.get('avoidPhrases')
 
+    if not business_name or len(business_name) > 120:
+        return jsonify({'error': 'Invalid business name'}), 400
+
+    if preferred_language not in ('עברית', 'ערבית', 'אנגלית'):
+        return jsonify({'error': 'Invalid preferred language'}), 400
+
+    if len(business_name_localized) > 120:
+        return jsonify({'error': 'Localized business name is too long'}), 400
+
+    if preferred_language in ('ערבית', 'אנגלית') and not business_name_localized:
+        return jsonify({'error': 'Business name in preferred language is required'}), 400
+
+    if preferred_language == 'עברית':
+        business_name_localized = ''
+
     main_image = save_uploaded_file(files.get('main_image'))
     logo_files = files.getlist('logos')
     gallery_files = files.getlist('gallery')
@@ -72,6 +88,7 @@ def save_brand_settings():
         db.session.add(settings)
 
     settings.business_name = business_name
+    settings.business_name_localized = business_name_localized or None
     settings.description = description
     settings.primary_color = primary_color
     settings.palette = palette
@@ -124,6 +141,7 @@ def get_settings():
 
     return jsonify({
         'businessName': settings.business_name,
+        'businessNameLocalized': settings.business_name_localized or '',
         'description': settings.description,
         'mainImage': settings.main_image,
         'logos': settings.logos.split(',') if settings.logos else [],

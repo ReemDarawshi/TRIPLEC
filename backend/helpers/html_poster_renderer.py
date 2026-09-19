@@ -1,8 +1,11 @@
+from backend.helpers.brand_display_name import get_brand_display_name
 import os
 import html
 import json
 import base64
 import mimetypes
+import re
+import uuid
 
 from playwright.sync_api import sync_playwright
 
@@ -34,14 +37,22 @@ FONT_FILES = {
     "Cairo": "Cairo-Bold.ttf",
     "Tajawal": "Tajawal-Bold.ttf",
     "Kufam": "Kufam-Bold.ttf",
+
     "Noto Sans": "NotoSans-Bold.ttf",
     "Noto Sans Hebrew": "NotoSansHebrew-Bold.ttf",
     "Noto Sans Arabic": "NotoSansArabic-Bold.ttf",
+
+    # שמות תצוגה
     "Arima Variable": "Arima-VariableFont_wght.ttf",
     "Borel": "Borel-Regular.ttf",
     "Rubik Gemstones": "RubikGemstones-Regular.ttf",
-}
 
+    # הערכים שנשמרים בפועל מתוך Settings.tsx
+    "Arima-VariableFont_wght": "Arima-VariableFont_wght.ttf",
+    "Borel-Regular": "Borel-Regular.ttf",
+    "RubikGemstones-Regular": "RubikGemstones-Regular.ttf",
+    "Pacifico-Regular": "Pacifico-Regular.ttf",
+}
 
 def _safe(value):
     return html.escape(str(value or ""))
@@ -221,6 +232,31 @@ def _darken_hex(color, factor=0.42):
         return "#111827"
 
 
+def _poster_font_css(title_font, subtitle_font, paragraph_font, language):
+    """Embed each available brand font separately; use a language fallback otherwise."""
+    default_font = _default_font_for_language(language)
+    selections = (
+        ("TripleTitleFont", title_font or default_font),
+        ("TripleSubtitleFont", subtitle_font or title_font or default_font),
+        ("TripleParagraphFont", paragraph_font or subtitle_font or title_font or default_font),
+    )
+    faces = []
+    families = []
+    for alias, requested in selections:
+        data, _ = _font_data_uri(requested)
+        if not data:
+            data, _ = _font_data_uri(default_font)
+        if data:
+            faces.append(
+                f"@font-face {{ font-family: '{alias}'; src: url('{data}'); "
+                "font-style: normal; }"
+            )
+            families.append(f"'{alias}', Arial, sans-serif")
+        else:
+            families.append("Arial, sans-serif")
+    return "\n".join(faces), *families
+
+
 def render_poster(
     headline,
     subheadline="",
@@ -233,7 +269,10 @@ def render_poster(
     logo_path=None,
     business_name="",
     background_image_path=None,
-    font_family="Rubik"
+    font_family="Rubik",
+    font_subtitle=None,
+    font_paragraph=None,
+    language="עברית"
 ):
     headline = _safe(headline)
     subheadline = _safe(subheadline)
@@ -266,25 +305,9 @@ def render_poster(
         background_full_path
     )
 
-    font_data, resolved_font = _font_data_uri(
-        font_family
+    font_face, css_font_family, subtitle_font_css, paragraph_font_css = (
+        _poster_font_css(font_family, font_subtitle, font_paragraph, language)
     )
-
-    font_face = ""
-
-    if font_data:
-        font_face = f"""
-        @font-face {{
-            font-family: 'TripleBrandFont';
-            src: url('{font_data}');
-            font-weight: 100 900;
-            font-style: normal;
-        }}
-        """
-
-        css_font_family = "'TripleBrandFont', Arial, sans-serif"
-    else:
-        css_font_family = f"'{resolved_font}', Arial, sans-serif"
 
     is_rtl = direction == "rtl"
 
@@ -363,6 +386,10 @@ def render_poster(
         body {{
             font-family: {css_font_family};
         }}
+
+        .headline {{ font-family: {css_font_family}; }}
+        .subheadline {{ font-family: {subtitle_font_css}; }}
+        .cta, .logo-text {{ font-family: {paragraph_font_css}; }}
 
         .poster {{
             width: 1080px;
@@ -1031,13 +1058,16 @@ def render_brand_poster(
         layout=layout,
         logo_path=logo_path,
         business_name=(
-            brand_settings.business_name
+            get_brand_display_name(brand_settings)
             or ""
         ),
         background_image_path=(
             background_image_path
         ),
-        font_family=font_family
+        font_family=font_family,
+        font_subtitle=brand_settings.font_subtitle,
+        font_paragraph=brand_settings.font_paragraph,
+        language=language
     )
 
 def render_blueprint_poster(
@@ -1058,7 +1088,8 @@ def render_blueprint_poster(
 
     secondary_color = next(
         (
-            color for color in palette
+            color
+            for color in palette
             if color
             and color.lower() != primary_color.lower()
         ),
@@ -1066,37 +1097,66 @@ def render_blueprint_poster(
     )
 
     language = brand_settings.preferred_language
-    direction = _direction_from_language(language)
+
+    direction = _direction_from_language(
+        language
+    )
 
     font_family = (
         brand_settings.font_title
         or _default_font_for_language(language)
     )
-    print("POSTER FONT:", font_family)
 
-    font_data, _ = _font_data_uri(font_family)
+    font_face, title_font_css, subtitle_font_css, paragraph_font_css = (
+        _poster_font_css(
+            font_family,
+            brand_settings.font_subtitle,
+            brand_settings.font_paragraph,
+            language
+        )
+    )
 
-    font_face = ""
-
-    if font_data:
-        font_face = f"""
-        @font-face {{
-            font-family: 'TripleBrandFont';
-            src: url('{font_data}');
-        }}
-        """
+    # -----------------------------
+    # LOGO
+    # -----------------------------
 
     logos = _parse_logos(
         brand_settings.logos
     )
 
-    logo_path = logos[0] if logos else None
-    logo_full = _resolve_static_path(logo_path)
-    logo_data = _file_to_data_uri(logo_full)
+    logo_path = (
+        logos[0]
+        if logos
+        else None
+    )
 
-    image_path = blueprint.get("image_path")
-    image_full = _resolve_static_path(image_path)
-    image_data = _file_to_data_uri(image_full)
+    logo_full = _resolve_static_path(
+        logo_path
+    )
+
+    logo_data = _file_to_data_uri(
+        logo_full
+    )
+
+    # -----------------------------
+    # IMAGE
+    # -----------------------------
+
+    image_path = blueprint.get(
+        "image_path"
+    )
+
+    image_full = _resolve_static_path(
+        image_path
+    )
+
+    image_data = _file_to_data_uri(
+        image_full
+    )
+
+    # -----------------------------
+    # COPY
+    # -----------------------------
 
     headline = _safe(
         blueprint.get("headline")
@@ -1110,6 +1170,10 @@ def render_blueprint_poster(
         blueprint.get("cta")
     )
 
+    # -----------------------------
+    # CREATIVE TYPE
+    # -----------------------------
+
     creative_type = blueprint.get(
         "creative_type",
         "brand_asset"
@@ -1120,30 +1184,155 @@ def render_blueprint_poster(
         ""
     )
 
+    # -----------------------------
+    # RENDERER STRATEGY
+    # -----------------------------
+
+    renderer_strategy = (
+        blueprint.get("renderer_strategy")
+        or {}
+    )
+
+    background_mode = renderer_strategy.get(
+        "background_mode",
+        "brand_dark"
+    )
+
+    typography_mode = renderer_strategy.get(
+        "typography_mode",
+        "bold_compact"
+    )
+
+    focal_element = renderer_strategy.get(
+        "focal_element",
+        "headline"
+    )
+
+    contrast_mode = renderer_strategy.get(
+        "contrast_mode",
+        "high"
+    )
+
+    density = renderer_strategy.get(
+        "density",
+        "balanced"
+    )
+
+    shape_style = renderer_strategy.get(
+        "shape_style",
+        "geometric"
+    )
+
+    cta_style = renderer_strategy.get(
+        "cta_style",
+        "pill"
+    )
+
+    # -----------------------------
+    # GRAPHIC DIRECTION
+    # -----------------------------
+
     graphic_direction = (
-    blueprint.get("graphic_direction")
-    or {}
+        blueprint.get("graphic_direction")
+        or {}
     )
 
     visual_style = str(
-        graphic_direction.get("visual_style", "")
+        graphic_direction.get(
+            "visual_style",
+            ""
+        )
     ).lower()
 
     shape_language = str(
-        graphic_direction.get("shape_language", "")
+        graphic_direction.get(
+            "shape_language",
+            ""
+        )
     ).lower()
 
     background_treatment = str(
-        graphic_direction.get("background_treatment", "")
+        graphic_direction.get(
+            "background_treatment",
+            ""
+        )
     ).lower()
 
     typography_treatment = str(
-        graphic_direction.get("typography_treatment", "")
+        graphic_direction.get(
+            "typography_treatment",
+            ""
+        )
     ).lower()
 
     special_element = str(
-        graphic_direction.get("special_element", "")
+        graphic_direction.get(
+            "special_element",
+            ""
+        )
     ).lower()
+
+    # -----------------------------
+    # GENERATED VISUAL
+    # -----------------------------
+
+    visual_generation = (
+        blueprint.get("visual_generation")
+        or {}
+    )
+
+    subject = str(
+        visual_generation.get(
+            "subject",
+            ""
+        )
+    ).lower()
+
+    scene = str(
+        visual_generation.get(
+            "scene",
+            ""
+        )
+    ).lower()
+
+    mood = str(
+        visual_generation.get(
+            "mood",
+            ""
+        )
+    ).lower()
+
+    lighting = str(
+        visual_generation.get(
+            "lighting",
+            ""
+        )
+    ).lower()
+
+    composition_notes = str(
+        visual_generation.get(
+            "composition_notes",
+            ""
+        )
+    ).lower()
+
+    # -----------------------------
+    # BLUEPRINT SIGNATURE
+    # -----------------------------
+
+    blueprint_signature = " ".join([
+        str(creative_kind),
+        visual_style,
+        shape_language,
+        background_treatment,
+        typography_treatment,
+        special_element,
+        subject,
+        scene,
+        mood,
+        lighting,
+        composition_notes,
+    ])
 
     graphic_signature = " ".join([
         visual_style,
@@ -1153,128 +1342,233 @@ def render_blueprint_poster(
         special_element,
     ])
 
-    graphic_seed = sum(
-        ord(char)
-        for char in graphic_signature
-    )
+    # -----------------------------
+    # DEBUG
+    # -----------------------------
 
-    graphic_variant = graphic_seed % 4
+    if creative_type == "ai_creative":
+        print(
+            "\n========== AI CREATIVE BLUEPRINT =========="
+        )
 
-    background_variant = (graphic_seed // 4) % 4
-    typography_variant = (graphic_seed // 16) % 4
+        print(
+            json.dumps(
+                blueprint,
+                ensure_ascii=False,
+                indent=2
+            )
+        )
 
-    
-    graphic_backgrounds = [
-    # Brand Dark
-    f"""
-    linear-gradient(
-        145deg,
-        #111827 0%,
-        {secondary_color} 52%,
-        {primary_color} 100%
-    )
-    """,
+        print(
+            "===========================================\n"
+        )
 
-    # Brand Light
-    f"""
-    radial-gradient(
-        circle at 80% 20%,
-        {primary_color}22,
-        transparent 32%
-    ),
-    linear-gradient(
-        135deg,
-        #f8fafc 0%,
-        #eef2f7 100%
-    )
-    """,
-
-    # Bold Brand Gradient
-    f"""
-    radial-gradient(
-        circle at 20% 25%,
-        rgba(255,255,255,.18),
-        transparent 30%
-    ),
-    linear-gradient(
-        135deg,
-        {primary_color} 0%,
-        {secondary_color} 55%,
-        #111827 100%
-    )
-    """,
-
-    # Editorial Neutral
-    f"""
-    linear-gradient(
-        160deg,
-        #f8fafc 0%,
-        #e5e7eb 62%,
-        {primary_color} 160%
-    )
-    """
-    ]
-
-    graphic_typography_styles = [
-        """
-        letter-spacing:-2px;
-        font-weight:900;
+    background_map = {
+        "brand_dark": f"""
+            linear-gradient(
+                145deg,
+                #111827 0%,
+                {secondary_color} 52%,
+                {primary_color} 100%
+            )
         """,
 
-        """
-        letter-spacing:1px;
-        font-weight:700;
+        "brand_light": f"""
+            radial-gradient(
+                circle at 80% 20%,
+                {primary_color}22,
+                transparent 32%
+            ),
+            linear-gradient(
+                135deg,
+                #f8fafc 0%,
+                #eef2f7 100%
+            )
         """,
 
-        """
-        letter-spacing:-4px;
-        font-weight:900;
-        line-height:.94;
+        "bold_gradient": f"""
+            radial-gradient(
+                circle at 20% 25%,
+                rgba(255,255,255,.18),
+                transparent 30%
+            ),
+            linear-gradient(
+                135deg,
+                {primary_color} 0%,
+                {secondary_color} 55%,
+                #111827 100%
+            )
         """,
 
-        """
-        letter-spacing:3px;
-        font-weight:800;
-        """
-    ]
+        "editorial_neutral": f"""
+            linear-gradient(
+                160deg,
+                #f8fafc 0%,
+                #e5e7eb 62%,
+                {primary_color} 160%
+            )
+        """,
 
-    poster_background = f"""
-    radial-gradient(
-        circle at 20% 20%,
-        {primary_color},
-        transparent 45%
-    ),
-    linear-gradient(
-        135deg,
-        {secondary_color},
-        {primary_color}
+        "image_dominant": f"""
+            linear-gradient(
+                135deg,
+                {secondary_color},
+                {primary_color}
+            )
+        """,
+
+        "image_soft": f"""
+            linear-gradient(
+                135deg,
+                #f8fafc 0%,
+                {primary_color}22 100%
+            )
+        """
+    }
+
+    typography_map = {
+        "bold_compact": """
+            letter-spacing:-2px;
+            font-weight:900;
+            line-height:.96;
+        """,
+
+        "elegant_spacious": """
+            letter-spacing:1px;
+            font-weight:700;
+            line-height:1.12;
+        """,
+
+        "editorial": """
+            letter-spacing:-1px;
+            font-weight:800;
+            line-height:1.02;
+        """,
+
+        "playful": """
+            letter-spacing:2px;
+            font-weight:800;
+            line-height:1.08;
+        """,
+
+        "minimal": """
+            letter-spacing:0;
+            font-weight:700;
+            line-height:1.10;
+        """
+    }
+
+    poster_background = background_map.get(
+        background_mode,
+        background_map["brand_dark"]
     )
-    """
 
-    headline_extra_css = ""
+    headline_extra_css = typography_map.get(
+        typography_mode,
+        typography_map["bold_compact"]
+    )
 
     content_color = "white"
     cta_background = "white"
     cta_color = secondary_color
 
-    if creative_kind == "pure_graphic":
-        if background_variant in [1, 3]:
-            content_color = "#111827"
-            cta_background = primary_color
-            cta_color = "white"
+    if background_mode in [
+        "brand_light",
+        "editorial_neutral",
+        "image_soft"
+    ]:
+        content_color = "#111827"
+        cta_background = primary_color
+        cta_color = "white"
 
-    if creative_kind == "pure_graphic":
-        poster_background = (
-        graphic_backgrounds[
-            background_variant
-        ]
+    contrast_map = {
+        "high": {
+            "overlay_opacity": ".78",
+            "text_shadow": "0 8px 28px rgba(0,0,0,.35)",
+        },
+        "medium": {
+            "overlay_opacity": ".55",
+            "text_shadow": "0 6px 22px rgba(0,0,0,.24)",
+        },
+        "soft": {
+            "overlay_opacity": ".32",
+            "text_shadow": "0 4px 16px rgba(0,0,0,.16)",
+        },
+    }
+
+    density_map = {
+        "minimal": {
+            "subheadline_size": "28px",
+            "content_gap": "24px",
+            "shape_opacity": ".08",
+        },
+        "balanced": {
+            "subheadline_size": "32px",
+            "content_gap": "38px",
+            "shape_opacity": ".16",
+        },
+        "expressive": {
+            "subheadline_size": "36px",
+            "content_gap": "46px",
+            "shape_opacity": ".24",
+        },
+    }
+
+    shape_style_map = {
+        "none": "shape-none",
+        "geometric": "shape-geometric",
+        "organic": "shape-organic",
+        "linear": "shape-linear",
+        "mixed": "shape-mixed",
+    }
+
+    cta_style_map = {
+        "pill": {
+            "border_radius": "999px",
+            "border": "none",
+            "background": cta_background,
+            "color": cta_color,
+        },
+        "solid": {
+            "border_radius": "14px",
+            "border": "none",
+            "background": primary_color,
+            "color": "white",
+        },
+        "outline": {
+            "border_radius": "14px",
+            "border": f"2px solid {content_color}",
+            "background": "transparent",
+            "color": content_color,
+        },
+        "minimal_text": {
+            "border_radius": "0",
+            "border": "none",
+            "background": "transparent",
+            "color": content_color,
+        },
+    }
+
+    contrast_settings = contrast_map.get(
+        contrast_mode,
+        contrast_map["high"]
     )
 
-    headline_extra_css = (
-        graphic_typography_styles[
-            typography_variant
-        ]
+    density_settings = density_map.get(
+        density,
+        density_map["balanced"]
     )
+
+    shape_class = shape_style_map.get(
+        shape_style,
+        "shape-geometric"
+    )
+
+    cta_settings = cta_style_map.get(
+        cta_style,
+        cta_style_map["pill"]
+    )
+
 
     text_position = composition.get(
         "text_position",
@@ -1377,6 +1671,53 @@ def render_blueprint_poster(
             "linear-gradient(135deg, rgba(0,0,0,.38), rgba(0,0,0,.10))",
     }
 
+    # A strategy controls visual hierarchy. Never interpolate AI text as CSS.
+    focal_class = {
+        "headline": "focus-headline",
+        "image": "focus-image",
+        "graphic_element": "focus-graphic",
+        "cta": "focus-cta",
+    }.get(focal_element, "focus-headline")
+
+    # A photo can have unpredictable brightness. Protect copy with an
+    # overlay selected for its foreground color and requested contrast.
+    overlay_background = overlay_css.get(
+        overlay,
+        overlay_css["dark_gradient"]
+    )
+    content_panel_background = "transparent"
+    content_panel_padding = "0"
+    content_panel_radius = "0"
+
+    if image_data:
+        strength = float(contrast_settings["overlay_opacity"])
+        if focal_element == "image":
+            strength = max(0.42, strength - 0.12)
+            # Keep copy readable while revealing more of the photo.
+            content_panel_background = (
+                "rgba(255,255,255,.72)" if content_color == "#111827"
+                else "rgba(0,0,0,.42)"
+            )
+            content_panel_padding = "22px"
+            content_panel_radius = "20px"
+        overlay_rgb = "255,255,255" if content_color == "#111827" else "0,0,0"
+        overlay_background = (
+            f"linear-gradient(135deg, rgba({overlay_rgb},{strength:.2f}) "
+            f"0%, rgba({overlay_rgb},{strength * 0.48:.2f}) 100%)"
+        )
+    elif content_color == "#111827":
+        # Do not darken a light poster under dark foreground text.
+        overlay_background = "transparent"
+
+    focal_headline_size = headline_sizes.get(headline_scale, "82px")
+    if focal_element == "headline":
+        focal_headline_size = f"{min(int(focal_headline_size[:-2]) + 8, 112)}px"
+
+    focal_cta_font_size = "30px" if focal_element == "cta" else "25px"
+    focal_cta_padding = (
+        "21px 38px" if focal_element == "cta" else "17px 32px"
+    )
+
     image_css = ""
 
     if image_data:
@@ -1437,10 +1778,10 @@ def render_blueprint_poster(
         />
         """
 
-    elif brand_settings.business_name:
+    elif get_brand_display_name(brand_settings):
         logo_html = f"""
         <div class="logo-text">
-            {_safe(brand_settings.business_name)}
+            {_safe(get_brand_display_name(brand_settings))}
         </div>
         """
 
@@ -1454,57 +1795,114 @@ def render_blueprint_poster(
         />
         """
 
+    if (
+        "cocktail" in blueprint_signature
+        or "utensil" in blueprint_signature
+    ):
+        ai_variant = "culinary_icons"
+
+    elif (
+        "sunrise" in blueprint_signature
+        or "morning" in blueprint_signature
+    ):
+        ai_variant = "sunrise_scene"
+
+    elif (
+        "organic" in blueprint_signature
+        and "angular" in blueprint_signature
+    ):
+        ai_variant = "organic_geometric"
+
+    elif (
+        "luxurious" in blueprint_signature
+        or "serene" in blueprint_signature
+    ):
+        ai_variant = "soft_editorial"
+
+    else:
+        ai_variant = "abstract_premium"
+
+
     graphic_html = ""
+
+    # Keep graphic_direction-driven concept selection, while renderer_strategy
+    # controls how decorative shapes are displayed.
+    shape_class = shape_class if creative_kind == "pure_graphic" else "shape-mixed"
+    shape_layer_opacity = {
+        "minimal": "0.55",
+        "balanced": "0.85",
+        "expressive": "1",
+    }.get(density, "0.85")
 
     if creative_kind == "pure_graphic":
 
-        if graphic_variant == 0:
+        if ai_variant == "culinary_icons":
             graphic_html = """
             <div class="graphic-orbit"></div>
             <div class="graphic-frame"></div>
             <div class="graphic-line"></div>
             <div class="graphic-dot"></div>
+            <div class="graphic-icon graphic-icon-fork"></div>
+            <div class="graphic-icon graphic-icon-glass"></div>
             """
 
-        elif graphic_variant == 1:
+        elif ai_variant == "organic_geometric":
+            graphic_html = """
+            <div class="graphic-blob-one"></div>
+            <div class="graphic-blob-two"></div>
+            <div class="graphic-ring"></div>
+            <div class="graphic-accent-line"></div>
+            <div class="graphic-angle"></div>
+            """
+
+        else:
             graphic_html = """
             <div class="graphic-circle-large"></div>
             <div class="graphic-circle-small"></div>
             <div class="graphic-diagonal"></div>
             """
 
-        elif graphic_variant == 2:
+
+    elif creative_kind == "generated_visual":
+
+        if ai_variant == "sunrise_scene":
             graphic_html = """
-            <div class="graphic-grid"></div>
-            <div class="graphic-block"></div>
-            <div class="graphic-accent-line"></div>
+            <div class="visual-sunrise"></div>
+            <div class="visual-horizon"></div>
+            <div class="visual-cityline"></div>
+            <div class="visual-light"></div>
+            """
+
+        elif ai_variant == "soft_editorial":
+            graphic_html = """
+            <div class="visual-glow visual-glow-one"></div>
+            <div class="visual-glow visual-glow-two"></div>
+            <div class="visual-soft-arch"></div>
+            <div class="visual-light"></div>
             """
 
         else:
             graphic_html = """
-            <div class="graphic-blob-one"></div>
-            <div class="graphic-blob-two"></div>
-            <div class="graphic-ring"></div>
+            <div class="visual-glow visual-glow-one"></div>
+            <div class="visual-glow visual-glow-two"></div>
+            <div class="visual-horizon"></div>
+            <div class="visual-light"></div>
             """
 
-    elif creative_kind == "generated_visual":
-        graphic_html = """
-        <div class="visual-glow visual-glow-one"></div>
-        <div class="visual-glow visual-glow-two"></div>
-        <div class="visual-horizon"></div>
-        <div class="visual-light"></div>
-        """
 
+    # A fresh filename prevents regenerated designs from overwriting older
+    # posters or being displayed from the browser cache.
+    design_id = re.sub(
+        r"[^A-Za-z0-9_-]", "_", str(blueprint.get("id") or "design")
+    )[:64] or "design"
     output_name = (
-        f"campaign_{campaign_id}_"
-        f"{blueprint.get('id', 'design')}.png"
+        f"campaign_{campaign_id}_{design_id}_{uuid.uuid4().hex}.png"
     )
 
     output_path = os.path.join(
         OUTPUT_DIR,
         output_name
     )
-
     html_content = f"""
     <html dir="{direction}">
     <head>
@@ -1526,10 +1924,7 @@ def render_blueprint_poster(
             }}
 
             body {{
-                font-family:
-                    'TripleBrandFont',
-                    Arial,
-                    sans-serif;
+                font-family: {paragraph_font_css};
             }}
 
             .poster {{
@@ -1540,12 +1935,43 @@ def render_blueprint_poster(
 
                 background:
                     {poster_background};
-                    ),
-                    linear-gradient(
-                        135deg,
-                        {secondary_color},
-                        {primary_color}
-                    );
+            }}
+
+            /* Strategy-controlled decorative shapes. Preserve meaningful
+               icons selected using graphic_direction. */
+            .shape-layer {{
+                position:absolute;
+                inset:0;
+                z-index:1;
+                pointer-events:none;
+                opacity:{shape_layer_opacity};
+            }}
+
+            .shape-none .shape-layer > :not(.graphic-icon) {{
+                display:none;
+            }}
+
+            .shape-geometric .shape-layer .graphic-blob-one,
+            .shape-geometric .shape-layer .graphic-blob-two {{
+                display:none;
+            }}
+
+            .shape-organic .shape-layer .graphic-frame,
+            .shape-organic .shape-layer .graphic-line,
+            .shape-organic .shape-layer .graphic-diagonal,
+            .shape-organic .shape-layer .graphic-angle,
+            .shape-organic .shape-layer .graphic-accent-line {{
+                display:none;
+            }}
+
+            .shape-linear .shape-layer .graphic-blob-one,
+            .shape-linear .shape-layer .graphic-blob-two,
+            .shape-linear .shape-layer .graphic-orbit,
+            .shape-linear .shape-layer .graphic-circle-large,
+            .shape-linear .shape-layer .graphic-circle-small,
+            .shape-linear .shape-layer .graphic-dot,
+            .shape-linear .shape-layer .graphic-ring {{
+                display:none;
             }}
 
             {image_css}
@@ -1553,11 +1979,7 @@ def render_blueprint_poster(
             .overlay {{
                 position:absolute;
                 inset:0;
-                background:
-                    {overlay_css.get(
-                        overlay,
-                        overlay_css["dark_gradient"]
-                    )};
+                background:{overlay_background};
                 z-index:2;
             }}
 
@@ -1577,40 +1999,70 @@ def render_blueprint_poster(
                 text-align:{alignment};
                 z-index:10;
                 color:{content_color};
+                background:{content_panel_background};
+                padding:{content_panel_padding};
+                border-radius:{content_panel_radius};
+            }}
+
+            .focus-image .photo {{
+                transform:scale(1.035);
+            }}
+
+            .focus-graphic .shape-layer {{
+                opacity:1;
+            }}
+
+            .focus-cta .cta {{
+                font-weight:900;
             }}
 
             .headline {{
-                font-size:
-                    {headline_sizes.get(
-                        headline_scale,
-                        "82px"
-                    )};
+                    font-family: {title_font_css};
+                    font-size:{focal_headline_size};
 
-                line-height:1.02;
-                font-weight:900;
-                {headline_extra_css}
-                margin-bottom:28px;
-                text-shadow:
-                    0 6px 25px
-                    rgba(0,0,0,.28);
-            }}
+                    {headline_extra_css}
+
+                    margin-bottom:
+                        {density_settings["content_gap"]};
+
+                    text-shadow:
+                        {contrast_settings["text_shadow"]};
+                }}
 
             .subheadline {{
-                font-size:32px;
-                line-height:1.45;
-                margin-bottom:38px;
-                opacity:.94;
-            }}
+                    font-family: {subtitle_font_css};
+                    font-size:
+                        {density_settings["subheadline_size"]};
+
+                    line-height:1.45;
+
+                    margin-bottom:
+                        {density_settings["content_gap"]};
+
+                    opacity:.94;
+                }}
+
 
             .cta {{
-                display:inline-block;
-                padding:17px 32px;
-                border-radius:999px;
-                background:{cta_background};
-                color:{cta_color};
-                font-size:25px;
-                font-weight:800;
-            }}
+                    font-family: {paragraph_font_css};
+                    display:inline-block;
+                    padding:{focal_cta_padding};
+
+                    border-radius:
+                        {cta_settings["border_radius"]};
+
+                    border:
+                        {cta_settings["border"]};
+
+                    background:
+                        {cta_settings["background"]};
+
+                    color:
+                        {cta_settings["color"]};
+
+                    font-size:{focal_cta_font_size};
+                    font-weight:800;
+                }}
 
             .logo {{
                 position:absolute;
@@ -1626,6 +2078,7 @@ def render_blueprint_poster(
             }}
 
             .logo-text {{
+                    font-family: {paragraph_font_css};
                 position:absolute;
                 {logo_css.get(
                     logo_position,
@@ -1672,15 +2125,13 @@ def render_blueprint_poster(
             }}
 
             .graphic-dot {{
-                        /* PURE GRAPHIC - VARIANT 1 */
-            .graphic-circle-large {{
                 position:absolute;
-                width:520px;
-                height:520px;
+                width:90px;
+                height:90px;
                 border-radius:50%;
-                border:55px solid rgba(255,255,255,.12);
-                right:-120px;
-                top:-100px;
+                background:rgba(255,255,255,.16);
+                right:130px;
+                top:160px;
                 z-index:1;
             }}
 
@@ -1780,7 +2231,7 @@ def render_blueprint_poster(
                 bottom:120px;
                 z-index:1;
             }}
-            }}
+    
 
             /* GENERATED VISUAL PLACEHOLDER */
             .visual-glow {{
@@ -1837,16 +2288,135 @@ def render_blueprint_poster(
                 z-index:1;
             }}
 
+                        /* AI VARIANT: CULINARY ICONS */
+            .graphic-icon {{
+                position:absolute;
+                z-index:1;
+                opacity:.20;
+            }}
+
+            .graphic-icon-fork {{
+                width:18px;
+                height:330px;
+                background:rgba(255,255,255,.85);
+                right:160px;
+                top:180px;
+                border-radius:999px;
+                transform:rotate(18deg);
+            }}
+
+            .graphic-icon-glass {{
+                width:180px;
+                height:220px;
+                border:18px solid rgba(255,255,255,.55);
+                border-top:0;
+                border-radius:0 0 90px 90px;
+                left:120px;
+                bottom:140px;
+                transform:rotate(-12deg);
+            }}
+
+            /* AI VARIANT: ORGANIC + GEOMETRIC */
+            .graphic-angle {{
+                position:absolute;
+                width:420px;
+                height:420px;
+                border-top:18px solid rgba(255,255,255,.18);
+                border-right:18px solid rgba(255,255,255,.18);
+                right:-40px;
+                top:120px;
+                transform:rotate(18deg);
+                z-index:1;
+            }}
+
+            /* AI VARIANT: SUNRISE SCENE */
+            .visual-sunrise {{
+                position:absolute;
+                width:430px;
+                height:430px;
+                border-radius:50%;
+                background:
+                    radial-gradient(
+                        circle,
+                        rgba(255,255,255,.55) 0%,
+                        rgba(255,255,255,.18) 40%,
+                        transparent 70%
+                    );
+                left:50%;
+                top:120px;
+                transform:translateX(-50%);
+                z-index:1;
+            }}
+
+            .visual-cityline {{
+                position:absolute;
+                left:0;
+                bottom:120px;
+                width:100%;
+                height:280px;
+                z-index:1;
+                opacity:.20;
+                background:
+                    linear-gradient(
+                        to top,
+                        rgba(255,255,255,.45),
+                        transparent
+                    );
+                clip-path:polygon(
+                    0 100%,
+                    0 65%,
+                    8% 65%,
+                    8% 45%,
+                    15% 45%,
+                    15% 72%,
+                    22% 72%,
+                    22% 38%,
+                    30% 38%,
+                    30% 60%,
+                    40% 60%,
+                    40% 32%,
+                    47% 32%,
+                    47% 68%,
+                    57% 68%,
+                    57% 42%,
+                    66% 42%,
+                    66% 58%,
+                    76% 58%,
+                    76% 35%,
+                    84% 35%,
+                    84% 66%,
+                    92% 66%,
+                    92% 48%,
+                    100% 48%,
+                    100% 100%
+                );
+            }}
+
+            /* AI VARIANT: SOFT EDITORIAL */
+            .visual-soft-arch {{
+                position:absolute;
+                width:540px;
+                height:760px;
+                border-radius:270px 270px 40px 40px;
+                border:4px solid rgba(255,255,255,.18);
+                left:50%;
+                top:120px;
+                transform:translateX(-50%);
+                z-index:1;
+            }}
+
         </style>
     </head>
 
     <body>
 
-        <div class="poster">
+        <div class="poster {shape_class} {focal_class}">
 
             {photo_html}
 
-            {graphic_html}
+            <div class="shape-layer">
+                {graphic_html}
+            </div>
 
             <div class="overlay"></div>
 

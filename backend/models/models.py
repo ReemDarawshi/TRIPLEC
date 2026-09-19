@@ -72,6 +72,7 @@ class BrandSettings(db.Model):
     business_id = db.Column(db.Integer, db.ForeignKey('businesses.id'), nullable=False)
     business = db.relationship('Business', back_populates='brand_settings')
     business_name = db.Column(db.String(120), nullable=False)
+    business_name_localized = db.Column(db.String(120), nullable=True)
     description = db.Column(db.Text)
     main_image = db.Column(db.String(255))
     logos = db.Column(db.Text)
@@ -126,6 +127,7 @@ class Campaign(db.Model):
     design_id = db.Column(db.String(100))
     message_text = db.Column(db.Text)
     ai_text_options = db.Column(db.JSON)
+    poster_options = db.Column(db.JSON, nullable=True)  # Last complete set and its selected text
     channel = db.Column(db.String(50))
     scheduled_at = db.Column(db.DateTime)
     image_path = db.Column(db.String(255))
